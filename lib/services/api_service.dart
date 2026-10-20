@@ -1,6 +1,6 @@
 class ApiService {
 
   static const String baseUrl =
-      'http://192.168.100.204:3000';
+      'https://playboxd-api.onrender.com';
 
 }
