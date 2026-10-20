@@ -2,6 +2,7 @@ services:
   - type: web
     name: playboxd-api
     runtime: node
+    plan: free
     rootDir: backend/backend
     buildCommand: npm ci
     startCommand: npm start
