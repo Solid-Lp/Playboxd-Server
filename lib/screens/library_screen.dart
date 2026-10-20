@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/api_service.dart';
+import 'game_details_screen.dart';
 
 class LibraryScreen extends StatefulWidget {
   final VoidCallback? onProfileTap;
@@ -231,6 +232,23 @@ class LibraryScreenState extends State<LibraryScreen> {
         final game = _filteredGames[index];
         return _LibraryCard(
           game: game,
+          onTap: () async {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => GameDetailsScreen(
+                  game: {
+                    'id': game['game_id'],
+                    'name': game['game_name'] ?? '',
+                    'rating': 0,
+                  },
+                  imageUrl: (game['cover_url'] ?? '').toString(),
+                ),
+              ),
+            );
+            // Status ou remoção podem ter mudado na página do jogo
+            loadLibrary();
+          },
           onRemove: () => _removeGame(game['game_id'].toString()),
           onStatusChanged: (status) =>
               _changeStatus(game['game_id'].toString(), status),
@@ -265,11 +283,13 @@ class LibraryScreenState extends State<LibraryScreen> {
 // ─── Library Card ─────────────────────────────────────────────────────────────
 class _LibraryCard extends StatelessWidget {
   final Map<String, dynamic> game;
+  final VoidCallback onTap;
   final VoidCallback onRemove;
   final ValueChanged<String> onStatusChanged;
 
   const _LibraryCard({
     required this.game,
+    required this.onTap,
     required this.onRemove,
     required this.onStatusChanged,
   });
@@ -278,7 +298,9 @@ class _LibraryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final coverUrl = game['cover_url'] ?? '';
 
-    return Container(
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
       decoration: BoxDecoration(
         color: const Color(0xFF0E1A16),
         borderRadius: BorderRadius.circular(20),
@@ -330,6 +352,7 @@ class _LibraryCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
       ),
     );
   }

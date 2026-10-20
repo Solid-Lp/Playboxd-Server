@@ -263,7 +263,17 @@ class _MainScreenState extends State<MainScreen> {
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: ClipRRect(
+      child: GestureDetector(
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => GameDetailsScreen(
+              game: game,
+              imageUrl: getImage(game),
+            ),
+          ),
+        ),
+        child: ClipRRect(
         borderRadius: BorderRadius.circular(30),
         child: Container(
           constraints: const BoxConstraints(minHeight: 520),
@@ -319,6 +329,7 @@ class _MainScreenState extends State<MainScreen> {
             ),
           ),
         ),
+      ),
       ),
     );
   }
