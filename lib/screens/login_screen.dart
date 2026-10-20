@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -73,40 +74,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (data['success']) {
 
-        final prefs =
-            await SharedPreferences.getInstance();
-
-        await prefs.setString(
-          'token',
-          data['token'],
-        );
-
-        await prefs.setString(
-          'username',
-          data['user']['username'],
-        );
-
-        await prefs.setString(
-          'email',
-          data['user']['email'],
-        );
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Login realizado com sucesso!',
-            ),
-          ),
-        );
-
-        Navigator.pushReplacement(
-
-          context,
-
-          MaterialPageRoute(
-            builder: (_) => const MainScreen(),
-          ),
-        );
+        await handleAuthSuccess(data);
 
       } else {
 
@@ -136,6 +104,146 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() {
         loading = false;
       });
+    }
+  }
+
+  Future<void> handleAuthSuccess(Map<String, dynamic> data) async {
+
+    final prefs =
+        await SharedPreferences.getInstance();
+
+    await prefs.setString(
+      'token',
+      data['token'],
+    );
+
+    await prefs.setString(
+      'username',
+      data['user']['username'],
+    );
+
+    await prefs.setString(
+      'email',
+      data['user']['email'],
+    );
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Login realizado com sucesso!',
+        ),
+      ),
+    );
+
+    Navigator.pushReplacement(
+
+      context,
+
+      MaterialPageRoute(
+        builder: (_) => const MainScreen(),
+      ),
+    );
+  }
+
+  static bool googleInitialized = false;
+
+  Future<void> loginWithGoogle() async {
+
+    try {
+
+      setState(() {
+        loading = true;
+      });
+
+      final googleSignIn = GoogleSignIn.instance;
+
+      if (!googleInitialized) {
+        await googleSignIn.initialize(
+          serverClientId: ApiService.googleServerClientId,
+        );
+        googleInitialized = true;
+      }
+
+      final account = await googleSignIn.authenticate();
+
+      final idToken = account.authentication.idToken;
+
+      if (idToken == null) {
+        throw Exception('Google não retornou o token de login');
+      }
+
+      final response = await http.post(
+
+        Uri.parse(
+          '${ApiService.baseUrl}/auth/google',
+        ),
+
+        headers: {
+          'Content-Type': 'application/json',
+        },
+
+        body: jsonEncode({
+          'idToken': idToken,
+        }),
+      );
+
+      final data =
+          jsonDecode(response.body);
+
+      if (data['success']) {
+
+        await handleAuthSuccess(data);
+
+      } else if (mounted) {
+
+        ScaffoldMessenger.of(context).showSnackBar(
+
+          SnackBar(
+            content: Text(
+              data['message'] ?? 'Erro ao entrar com Google',
+            ),
+          ),
+        );
+      }
+
+    } on GoogleSignInException catch (e) {
+
+      // Usuário fechou a janela do Google: não é erro
+      if (e.code != GoogleSignInExceptionCode.canceled && mounted) {
+
+        ScaffoldMessenger.of(context).showSnackBar(
+
+          SnackBar(
+            content: Text(
+              'Erro no login com Google: ${e.description ?? e.code.name}',
+            ),
+          ),
+        );
+      }
+
+    } catch (e) {
+
+      if (mounted) {
+
+        ScaffoldMessenger.of(context).showSnackBar(
+
+          SnackBar(
+            content: Text(
+              e.toString(),
+            ),
+          ),
+        );
+      }
+
+    } finally {
+
+      if (mounted) {
+        setState(() {
+          loading = false;
+        });
+      }
     }
   }
 
@@ -309,6 +417,105 @@ class _LoginScreenState extends State<LoginScreen> {
                               Icon(Icons.arrow_forward),
                             ],
                           ),
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                Row(
+
+                  children: [
+
+                    const Expanded(
+                      child: Divider(color: Colors.white10),
+                    ),
+
+                    Padding(
+
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+
+                      child: Text(
+
+                        'OU',
+
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.5),
+                          fontSize: 12,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                    ),
+
+                    const Expanded(
+                      child: Divider(color: Colors.white10),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 20),
+
+                SizedBox(
+
+                  width: double.infinity,
+
+                  height: 58,
+
+                  child: OutlinedButton(
+
+                    onPressed:
+                        loading ? null : loginWithGoogle,
+
+                    style: OutlinedButton.styleFrom(
+
+                      foregroundColor: Colors.white,
+
+                      side: const BorderSide(
+                        color: Colors.white24,
+                      ),
+
+                      shape: RoundedRectangleBorder(
+
+                        borderRadius:
+                            BorderRadius.circular(14),
+                      ),
+                    ),
+
+                    child: const Row(
+
+                      mainAxisAlignment:
+                          MainAxisAlignment.center,
+
+                      children: [
+
+                        Text(
+
+                          'G',
+
+                          style: TextStyle(
+                            color: Color(0xFF39FF14),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 20,
+                          ),
+                        ),
+
+                        SizedBox(width: 12),
+
+                        Text(
+
+                          'CONTINUAR COM GOOGLE',
+
+                          style: TextStyle(
+
+                            fontWeight:
+                                FontWeight.bold,
+
+                            fontSize: 15,
+
+                            letterSpacing: 1,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
 

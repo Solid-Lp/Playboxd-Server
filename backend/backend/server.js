@@ -4,8 +4,11 @@ const cors = require('cors');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const axios = require('axios');
+const { OAuth2Client } = require('google-auth-library');
 
 require('dotenv').config();
+
+const googleClient = new OAuth2Client();
 
 const app = express();
 
@@ -182,6 +185,13 @@ app.post('/login', async (req, res) => {
 
     const user = userQuery.rows[0];
 
+    if (!user.password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Esta conta usa login com Google',
+      });
+    }
+
     const validPassword = await bcrypt.compare(password, user.password);
 
     if (!validPassword) {
@@ -190,6 +200,92 @@ app.post('/login', async (req, res) => {
         message: 'Senha incorreta',
       });
     }
+
+    const token = jwt.sign(
+      { id: user.id },
+      process.env.JWT_SECRET
+    );
+
+    res.json({
+      success: true,
+      token,
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        avatar_url: user.avatar_url,
+      },
+    });
+
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+
+// =========================
+// LOGIN COM GOOGLE
+// =========================
+
+app.post('/auth/google', async (req, res) => {
+
+  try {
+
+    const { idToken } = req.body;
+
+    let payload;
+
+    try {
+      const ticket = await googleClient.verifyIdToken({
+        idToken,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+      payload = ticket.getPayload();
+    } catch (err) {
+      return res.status(401).json({
+        success: false,
+        message: 'Token do Google inválido',
+      });
+    }
+
+    if (!payload.email || !payload.email_verified) {
+      return res.status(401).json({
+        success: false,
+        message: 'E-mail do Google não verificado',
+      });
+    }
+
+    const googleId = payload.sub;
+    const email = payload.email.trim().toLowerCase();
+
+    let userQuery = await pool.query(
+      'SELECT * FROM users WHERE google_id = $1',
+      [googleId]
+    );
+
+    // Mesmo e-mail de uma conta com senha: vincula ao Google
+    if (userQuery.rows.length === 0) {
+      userQuery = await pool.query(
+        `UPDATE users SET google_id = $1
+         WHERE LOWER(email) = $2
+         RETURNING *`,
+        [googleId, email]
+      );
+    }
+
+    if (userQuery.rows.length === 0) {
+      const username = payload.name || email.split('@')[0];
+
+      userQuery = await pool.query(
+        `INSERT INTO users (username, email, password, google_id, avatar_url)
+         VALUES ($1, $2, NULL, $3, $4)
+         RETURNING *`,
+        [username, email, googleId, payload.picture || null]
+      );
+    }
+
+    const user = userQuery.rows[0];
 
     const token = jwt.sign(
       { id: user.id },
@@ -645,6 +741,7 @@ app.get('/privacy', (req, res) => {
 <h2>Dados coletados</h2>
 <ul>
   <li>Nome de usuário e e-mail, informados no cadastro.</li>
+  <li>Se você entrar com o Google: nome, e-mail, foto de perfil e o identificador da sua conta Google.</li>
   <li>Senha, armazenada apenas de forma criptografada (hash bcrypt).</li>
   <li>Jogos adicionados à biblioteca, status e progresso.</li>
   <li>Reviews e notas que você publica.</li>
@@ -672,7 +769,7 @@ app.get('/delete-account', (req, res) => {
   <li>Vá até a aba <strong>Profile</strong>.</li>
   <li>Toque em <strong>EXCLUIR CONTA</strong> e confirme.</li>
 </ol>
-<p>Serão apagados permanentemente: sua conta (nome de usuário, e-mail e senha), sua biblioteca de jogos e todas as suas reviews. Nenhum dado é mantido após a exclusão.</p>
+<p>Serão apagados permanentemente: sua conta (nome de usuário, e-mail, senha e vínculo com o Google, se houver), sua biblioteca de jogos e todas as suas reviews. Nenhum dado é mantido após a exclusão.</p>
 ${CONTACT_EMAIL ? '<p>Se não conseguir acessar o app, envie um e-mail a partir do endereço cadastrado pedindo a exclusão.</p>' : ''}
 `));
 });
