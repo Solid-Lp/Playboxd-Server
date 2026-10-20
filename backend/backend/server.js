@@ -758,6 +758,35 @@ app.get('/privacy', (req, res) => {
 
 <h2>Exclusão</h2>
 <p>Você pode excluir sua conta e todos os dados a qualquer momento. Veja <a href="/delete-account">como excluir sua conta</a>.</p>
+
+<h2>Segurança infantil</h2>
+<p>Veja nossos <a href="/child-safety">padrões contra abuso e exploração sexual infantil</a>.</p>
+`));
+});
+
+app.get('/child-safety', (req, res) => {
+  res.send(publicPage('Padrões de Segurança Infantil', `
+<p>O Playboxd tem tolerância zero com abuso e exploração sexual infantil (CSAE), incluindo material de abuso sexual infantil (CSAM). Estes padrões valem para todo conteúdo publicado no app, como nomes de usuário e reviews.</p>
+
+<h2>Conteúdo e condutas proibidos</h2>
+<ul>
+  <li>Qualquer material que mostre, promova ou normalize o abuso ou a exploração sexual de menores de 18 anos.</li>
+  <li>Conteúdo que sexualize crianças ou adolescentes, inclusive em texto.</li>
+  <li>Aliciamento (grooming), tentativa de contato com menores para fins sexuais ou sextorsão.</li>
+  <li>Divulgação, solicitação ou links para material de abuso sexual infantil.</li>
+</ul>
+
+<h2>Como aplicamos estes padrões</h2>
+<ul>
+  <li>Conteúdo que viole estes padrões é removido assim que identificado.</li>
+  <li>As contas responsáveis são excluídas permanentemente.</li>
+  <li>Casos de CSAM ou de risco a crianças são comunicados às autoridades competentes, como a SaferNet Brasil e a Polícia Federal, conforme o Estatuto da Criança e do Adolescente (ECA, Lei nº 8.069/1990) e a legislação aplicável.</li>
+  <li>Cooperamos com as autoridades em investigações, nos termos da lei.</li>
+</ul>
+
+<h2>Como denunciar</h2>
+<p>Se você encontrar no Playboxd qualquer conteúdo ou comportamento que coloque crianças em risco, denuncie imediatamente${CONTACT_EMAIL ? ` pelo e-mail <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a>` : ' pelo contato informado na página do app na Google Play'}, informando o nome do usuário e, se possível, o jogo e a review em questão. Todas as denúncias são analisadas com prioridade.</p>
+<p>Você também pode denunciar diretamente à <a href="https://new.safernet.org.br/denuncie">SaferNet Brasil</a> ou ligar para o Disque 100 (Direitos Humanos).</p>
 `));
 });
 
