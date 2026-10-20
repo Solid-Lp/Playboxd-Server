@@ -2,12 +2,12 @@ import 'dart:convert';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/api_service.dart';
 import '../services/app_settings.dart';
+import '../services/google_auth_service.dart';
 import 'game_details_screen.dart';
 import 'login_screen.dart';
 import 'settings_screen.dart';
@@ -97,10 +97,8 @@ class ProfileScreenState extends State<ProfileScreen> {
   Future<void> _logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
-    // Permite escolher outra conta Google no próximo login
-    try {
-      await GoogleSignIn.instance.signOut();
-    } catch (_) {}
+    // Permite escolher outra conta Google no próximo login (sem bloquear a saída)
+    GoogleAuthService.signOut();
     if (mounted) {
       Navigator.pushAndRemoveUntil(
         context,

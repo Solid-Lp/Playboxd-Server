@@ -5,8 +5,9 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'home_screen.dart';
+import 'app_shell.dart';
 import '../services/api_service.dart';
+import '../services/google_auth_service.dart';
 import 'signup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -137,17 +138,17 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
 
-    Navigator.pushReplacement(
+    Navigator.pushAndRemoveUntil(
 
       context,
 
       MaterialPageRoute(
-        builder: (_) => const MainScreen(),
+        builder: (_) => const AppShell(),
       ),
+
+      (_) => false,
     );
   }
-
-  static bool googleInitialized = false;
 
   Future<void> loginWithGoogle() async {
 
@@ -157,16 +158,9 @@ class _LoginScreenState extends State<LoginScreen> {
         loading = true;
       });
 
-      final googleSignIn = GoogleSignIn.instance;
+      await GoogleAuthService.ensureInitialized();
 
-      if (!googleInitialized) {
-        await googleSignIn.initialize(
-          serverClientId: ApiService.googleServerClientId,
-        );
-        googleInitialized = true;
-      }
-
-      final account = await googleSignIn.authenticate();
+      final account = await GoogleSignIn.instance.authenticate();
 
       final idToken = account.authentication.idToken;
 
