@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc 3.10" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Gamer Letterbox / Playboxed — Documentação Consolidada</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: 1.5em;}
+    div.column{flex: auto;}
+    @media screen {
+    div.columns{gap: min(4vw, 1.5em);}
+    div.column{overflow-x: auto;}
+    }
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="DOCUMENTATION.css" />
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">Gamer Letterbox / Playboxed — Documentação
+Consolidada</h1>
+</header>
+<h1 id="gamer-letterbox-playboxed-documentação-consolidada">Gamer
+Letterbox / Playboxed — Documentação Consolidada</h1>
+<h2 id="sumário">Sumário</h2>
+<ul>
+<li><a href="#introdução">Introdução</a></li>
+<li><a href="#requisitos">Requisitos</a>
+<ul>
+<li><a href="#objetivo">Objetivo</a></li>
+<li><a href="#stakeholders">Stakeholders</a></li>
+<li><a href="#requisitos-funcionais">Requisitos Funcionais</a></li>
+<li><a href="#requisitos-não-funcionais">Requisitos Não
+Funcionais</a></li>
+<li><a href="#interfaces-externas">Interfaces Externas</a></li>
+<li><a href="#restrições-e-dependências">Restrições e
+Dependências</a></li>
+<li><a href="#histórias-de-usuário">Histórias de Usuário</a></li>
+<li><a href="#critérios-de-aceitação">Critérios de Aceitação</a></li>
+</ul></li>
+<li><a href="#arquitetura-do-projeto">Arquitetura do Projeto</a>
+<ul>
+<li><a href="#visão-geral">Visão Geral</a></li>
+<li><a href="#camadas-do-app-flutter">Camadas do App Flutter</a>
+<ul>
+<li><a href="#entrada">Entrada</a></li>
+<li><a href="#serviços">Serviços</a></li>
+<li><a href="#repositórios">Repositórios</a></li>
+<li><a href="#telas">Telas</a></li>
+<li><a href="#widgets-reutilizáveis">Widgets Reutilizáveis</a></li>
+</ul></li>
+<li><a href="#backend">Backend</a>
+<ul>
+<li><a href="#servidor">Servidor</a></li>
+<li><a href="#rotas-principais">Rotas Principais</a></li>
+<li><a href="#autenticação">Autenticação</a></li>
+<li><a href="#integração-com-igdb">Integração com IGDB</a></li>
+</ul></li>
+<li><a href="#fluxo-de-tema-dinâmico">Fluxo de Tema Dinâmico</a></li>
+<li><a href="#padrões-de-design">Padrões de Design</a></li>
+<li><a href="#boas-práticas">Boas Práticas</a></li>
+</ul></li>
+<li><a href="#guia-de-contribuição">Guia de Contribuição</a>
+<ul>
+<li><a href="#fluxo-de-contribuição">Fluxo de Contribuição</a></li>
+<li><a href="#estilo-de-código">Estilo de Código</a></li>
+<li><a href="#temas-e-acessibilidade">Temas e Acessibilidade</a></li>
+<li><a href="#testes-e-verificação">Testes e Verificação</a></li>
+<li><a href="#arquitetura-da-aplicação">Arquitetura da
+Aplicação</a></li>
+<li><a href="#backend-1">Backend</a></li>
+<li><a href="#qualidade-de-código">Qualidade de Código</a></li>
+<li><a href="#pull-requests">Pull Requests</a></li>
+</ul></li>
+<li><a href="#como-rodar">Como Rodar</a></li>
+<li><a href="#referências">Referências</a></li>
+</ul>
+<h2 id="introdução">Introdução</h2>
+<p>Esta documentação consolidada reúne os requisitos, a arquitetura, as
+diretrizes de contribuição e o resumo do projeto Gamer Letterbox /
+Playboxed. O objetivo é fornecer um material único e organizado para
+apresentação, revisão e entrega.</p>
+<h2 id="resumo-do-projeto">Resumo do Projeto</h2>
+<p>Gamer Letterbox / Playboxed é um aplicativo Flutter para descoberta,
+biblioteca e avaliações de jogos, com backend Node.js + PostgreSQL.</p>
+<h3 id="principais-características">Principais Características</h3>
+<ul>
+<li>Autenticação via Supabase / backend JWT</li>
+<li>Tela de login e cadastro</li>
+<li>Feed de jogos populares e lançamentos</li>
+<li>Busca de jogos</li>
+<li>Tela de detalhes de jogo com review e biblioteca</li>
+<li>Biblioteca do usuário com status e progresso</li>
+<li>Perfil do usuário e atividade</li>
+<li>Configurações de alto contraste e escala de fonte</li>
+<li>Tela de Top Rated baseada em avaliações no backend</li>
+</ul>
+<h3 id="estrutura-de-pastas">Estrutura de Pastas</h3>
+<ul>
+<li><code>lib/main.dart</code> — ponto de entrada,
+<code>MaterialApp</code>, verificação de token e shell principal</li>
+<li><code>lib/services/app_settings.dart</code> — temas e preferências
+persistentes de alto contraste e escala de fonte</li>
+<li><code>lib/screens/</code> — telas principais do aplicativo</li>
+<li><code>lib/widgets/</code> — componentes reutilizáveis de UI</li>
+<li><code>lib/models/</code> — definições de modelos de dados</li>
+<li><code>lib/repositories/</code> — repositórios de autenticação e
+biblioteca</li>
+<li><code>backend/backend/</code> — API Express e integração
+PostgreSQL</li>
+</ul>
+<h2 id="requisitos">Requisitos</h2>
+<h3 id="objetivo">Objetivo</h3>
+<p>Documentar os requisitos funcionais e não funcionais do projeto Gamer
+Letterbox / Playboxed, garantindo clareza para o desenvolvimento e
+validação de funcionalidades.</p>
+<h3 id="stakeholders">Stakeholders</h3>
+<ul>
+<li>Usuário final: jogadores que querem descobrir, avaliar e gerenciar
+sua biblioteca de jogos.</li>
+<li>Desenvolvedores: equipe responsável pelo app Flutter e backend
+Node.js.</li>
+<li>Administrador do sistema: responsável pela infraestrutura de
+backend, banco de dados e integrações.</li>
+<li>Serviço externo: Supabase para autenticação e PostgreSQL para
+persistência de dados.</li>
+</ul>
+<h3 id="requisitos-funcionais">Requisitos Funcionais</h3>
+<ol type="1">
+<li>RF001 - Autenticação de Usuário
+<ul>
+<li>O sistema deve permitir login e cadastro de usuários.</li>
+<li>O sistema deve autenticar usuários via Supabase ou backend JWT.</li>
+</ul></li>
+<li>RF002 - Visualização de Jogos
+<ul>
+<li>O app deve exibir listas de jogos populares, lançamentos e
+recomendados.</li>
+<li>O app deve permitir buscar jogos por nome.</li>
+</ul></li>
+<li>RF003 - Tela de Detalhes de Jogo
+<ul>
+<li>O app deve exibir informações detalhadas do jogo, incluindo capa,
+descrição e avaliações.</li>
+<li>O app deve mostrar reviews de outros usuários e permitir que o
+usuário adicione seu próprio review.</li>
+</ul></li>
+<li>RF004 - Biblioteca de Usuário
+<ul>
+<li>O app deve permitir que o usuário adicione jogos à sua
+biblioteca.</li>
+<li>O app deve permitir marcar o status do jogo (por exemplo: jogando,
+concluído, desejando).</li>
+</ul></li>
+<li>RF005 - Avaliações e Reviews
+<ul>
+<li>O app deve permitir que o usuário escreva e publique avaliações de
+jogos.</li>
+<li>O app deve permitir visualizar avaliações existentes de outros
+usuários.</li>
+</ul></li>
+<li>RF006 - Configurações de Acessibilidade
+<ul>
+<li>O app deve oferecer opção de alto contraste.</li>
+<li>O app deve permitir ajuste de escala de fonte.</li>
+</ul></li>
+<li>RF007 - Navegação e Interface
+<ul>
+<li>O app deve fornecer navegação por abas entre as principais
+telas.</li>
+<li>O app deve exibir feedback visual para ações importantes.</li>
+</ul></li>
+</ol>
+<h3 id="requisitos-não-funcionais">Requisitos Não Funcionais</h3>
+<ol type="1">
+<li>RNF001 - Performance
+<ul>
+<li>O app deve carregar telas principais em menos de 2 segundos em
+conexões móveis razoáveis.</li>
+</ul></li>
+<li>RNF002 - Usabilidade
+<ul>
+<li>A interface deve ser responsiva e acessível, com suporte a temas de
+alto contraste e ajuste de fonte.</li>
+</ul></li>
+<li>RNF003 - Segurança
+<ul>
+<li>A autenticação deve proteger endpoints sensíveis usando tokens
+JWT.</li>
+<li>Dados do usuário devem ser armazenados de forma segura no
+backend.</li>
+</ul></li>
+<li>RNF004 - Confiabilidade
+<ul>
+<li>O sistema deve tratar erros de rede e exibir mensagens claras ao
+usuário.</li>
+</ul></li>
+<li>RNF005 - Escalabilidade
+<ul>
+<li>O backend deve estar preparado para aumentar a base de usuários, com
+separação de responsabilidades entre API e banco de dados.</li>
+</ul></li>
+</ol>
+<h3 id="interfaces-externas">Interfaces Externas</h3>
+<ul>
+<li>Supabase: autenticação e gerenciamento de usuários (opcional,
+conforme implantação).</li>
+<li>PostgreSQL: persistência de usuários, bibliotecas e reviews.</li>
+<li>IGDB / Twitch API: fonte de metadados de jogos e capas.</li>
+</ul>
+<h3 id="restrições-e-dependências">Restrições e Dependências</h3>
+<ul>
+<li>Flutter como framework principal do app móvel.</li>
+<li>Node.js e Express no backend.</li>
+<li>PostgreSQL como banco de dados relacional.</li>
+<li>Integração com Supabase para autenticação e storage de usuário.</li>
+</ul>
+<h3 id="histórias-de-usuário">Histórias de Usuário</h3>
+<ul>
+<li>HU001: Como jogador, quero me cadastrar e fazer login para acessar
+minha biblioteca.</li>
+<li>HU002: Como jogador, quero ver os jogos em destaque para descobrir
+novos títulos.</li>
+<li>HU003: Como jogador, quero pesquisar jogos para encontrar títulos
+específicos.</li>
+<li>HU004: Como jogador, quero ver detalhes de um jogo para aprender
+mais antes de adicioná-lo à biblioteca.</li>
+<li>HU005: Como jogador, quero escrever avaliações para compartilhar
+minha experiência.</li>
+<li>HU006: Como jogador, quero ativar alto contraste para melhorar a
+leitura.</li>
+<li>HU007: Como jogador, quero ajustar o tamanho da fonte para maior
+conforto.</li>
+</ul>
+<h3 id="critérios-de-aceitação">Critérios de Aceitação</h3>
+<ul>
+<li>O app deve permitir login e cadastro com validação de
+formulário.</li>
+<li>O app deve exibir listas de jogos e permitir pesquisa
+funcional.</li>
+<li>O app deve permitir adicionar jogos à biblioteca e ver o status de
+cada jogo.</li>
+<li>O app deve exibir e publicar reviews de jogos.</li>
+<li>O app deve aplicar o tema de alto contraste e a escala de fonte nas
+telas.</li>
+<li>O app deve navegar entre as principais seções sem travar.</li>
+</ul>
+<h2 id="arquitetura-do-projeto">Arquitetura do Projeto</h2>
+<h3 id="visão-geral">Visão Geral</h3>
+<p>O projeto é composto por:</p>
+<ul>
+<li>App Flutter (mobile)</li>
+<li>Backend Node.js/Express com PostgreSQL</li>
+</ul>
+<p>O app usa um padrão simples de camada para separar interface, lógica
+de estado e acesso a dados.</p>
+<h3 id="camadas-do-app-flutter">Camadas do App Flutter</h3>
+<h4 id="entrada">Entrada</h4>
+<ul>
+<li><code>lib/main.dart</code>
+<ul>
+<li>Inicializa <code>AppSettings</code></li>
+<li>Configura tema global do Material</li>
+<li>Define o fluxo de autenticação inicial</li>
+<li>Monta o <code>AppShell</code> com navegação por abas</li>
+</ul></li>
+</ul>
+<h4 id="serviços">Serviços</h4>
+<ul>
+<li><code>lib/services/app_settings.dart</code>
+<ul>
+<li>Singleton com <code>ChangeNotifier</code></li>
+<li>Gerencia preferências de alto contraste e escala de fonte</li>
+<li>Persiste em <code>SharedPreferences</code></li>
+</ul></li>
+<li><code>lib/services/api_service.dart</code>
+<ul>
+<li>Define <code>baseUrl</code> do backend local</li>
+</ul></li>
+<li><code>lib/services/supabase_service.dart</code>
+<ul>
+<li>Fornece instância do cliente Supabase</li>
+</ul></li>
+<li><code>lib/services/igdb_service.dart</code>
+<ul>
+<li>Pode ser usado para integração futura com IGDB</li>
+</ul></li>
+</ul>
+<h4 id="repositórios">Repositórios</h4>
+<ul>
+<li><code>lib/repositories/auth_repository.dart</code>
+<ul>
+<li>Encapsula lógica de autenticação Supabase</li>
+</ul></li>
+<li><code>lib/repositories/library_repository.dart</code>
+<ul>
+<li>Encapsula operações de biblioteca no Supabase</li>
+</ul></li>
+</ul>
+<h4 id="telas">Telas</h4>
+<ul>
+<li><code>lib/screens/home_screen.dart</code> — tela principal e feed de
+jogos</li>
+<li><code>lib/screens/discover_screen.dart</code> — exploração de
+jogos</li>
+<li><code>lib/screens/game_details_screen.dart</code> — detalhes e
+avaliações de jogo</li>
+<li><code>lib/screens/library_screen.dart</code> — biblioteca do
+usuário</li>
+<li><code>lib/screens/profile_screen.dart</code> — perfil e
+estatísticas</li>
+<li><code>lib/screens/settings_screen.dart</code> — configurações de
+tema e acessibilidade</li>
+<li><code>lib/screens/top_rated_screen.dart</code> — jogos melhor
+avaliados</li>
+<li><code>lib/screens/write_review_screen.dart</code> — formulário de
+review</li>
+<li><code>lib/screens/login_screen.dart</code> — autenticação de
+login</li>
+<li><code>lib/screens/signup_screen.dart</code> — cadastro de
+usuário</li>
+<li><code>lib/screens/edit_profile_screen.dart</code> — edição de
+perfil</li>
+<li><code>lib/screens/reviews_screen.dart</code> — lista de reviews</li>
+<li><code>lib/screens/search_screen.dart</code> — busca de jogos</li>
+</ul>
+<h4 id="widgets-reutilizáveis">Widgets Reutilizáveis</h4>
+<ul>
+<li><code>lib/widgets/game_details_header.dart</code> — cabeçalho da
+tela de detalhes</li>
+<li><code>lib/widgets/game_grid_card.dart</code> — card de jogo para
+grid</li>
+<li><code>lib/widgets/game_horizontal_card.dart</code> — card de jogo
+horizontal</li>
+<li><code>lib/widgets/hero_banner.dart</code> — banner de destaque</li>
+<li><code>lib/widgets/section_title.dart</code> — título de seção
+estilizado</li>
+<li><code>lib/widgets/review_card.dart</code> /
+<code>review_card_large.dart</code> — cartões de avaliação</li>
+<li><code>lib/widgets/navigation/bottom_navbar.dart</code> — navegação
+inferior</li>
+</ul>
+<h3 id="backend">Backend</h3>
+<p>Localizado em <code>backend/backend/</code>.</p>
+<h4 id="servidor">Servidor</h4>
+<ul>
+<li><code>server.js</code>
+<ul>
+<li>Inicializa Express, CORS e body parser</li>
+<li>Configura conexão PostgreSQL via <code>pg</code></li>
+<li>Define middleware de autenticação JWT</li>
+<li>Expõe rotas de usuário, biblioteca, reviews e jogos</li>
+</ul></li>
+</ul>
+<h4 id="rotas-principais">Rotas Principais</h4>
+<ul>
+<li><code>POST /register</code></li>
+<li><code>POST /login</code></li>
+<li><code>GET /popular-games</code></li>
+<li><code>GET /new-releases</code></li>
+<li><code>GET /search-games</code></li>
+<li><code>GET /library</code></li>
+<li><code>POST /library</code></li>
+<li><code>PATCH /library/:game_id</code></li>
+<li><code>DELETE /library/:game_id</code></li>
+<li><code>GET /reviews/popular</code></li>
+<li><code>GET /reviews/:game_id</code></li>
+<li><code>POST /reviews</code></li>
+<li><code>GET /top-rated</code></li>
+<li><code>GET /activity</code></li>
+<li><code>GET /profile/stats</code></li>
+</ul>
+<h4 id="autenticação">Autenticação</h4>
+<ul>
+<li>JWT via <code>jsonwebtoken</code></li>
+<li>Middleware <code>authMiddleware</code></li>
+<li>Cabeçalho <code>Authorization: Bearer &lt;token&gt;</code></li>
+</ul>
+<h4 id="integração-com-igdb">Integração com IGDB</h4>
+<ul>
+<li>O backend faz chamadas à API IGDB usando <code>axios</code> para:
+<ul>
+<li>dados de jogos populares</li>
+<li>lançamentos recentes</li>
+<li>busca de jogos</li>
+</ul></li>
+</ul>
+<h3 id="fluxo-de-tema-dinâmico">Fluxo de Tema Dinâmico</h3>
+<ol type="1">
+<li><code>AppSettings.load()</code> é chamado antes de
+<code>runApp</code></li>
+<li><code>MyApp</code> e telas usam <code>ListenableBuilder</code> para
+reagir a mudanças</li>
+<li>Preferências persistem em <code>SharedPreferences</code></li>
+<li>Alteração de <code>highContrast</code> e <code>fontScale</code>
+atualiza a UI imediatamente</li>
+</ol>
+<h3 id="padrões-de-design">Padrões de Design</h3>
+<ul>
+<li>Singleton com <code>AppSettings()</code> para estado
+compartilhado</li>
+<li><code>ListenableBuilder</code> para reatividade de tema</li>
+<li><code>IndexedStack</code> para manter estado entre abas</li>
+<li>Separação entre UI (<code>screens/widgets</code>) e dados/serviços
+(<code>services/repositories</code>)</li>
+</ul>
+<h3 id="boas-práticas">Boas Práticas</h3>
+<ul>
+<li>Extraia estilos e componentes comuns em widgets reutilizáveis</li>
+<li>Evite cores codificadas; prefira <code>AppSettings</code> ou
+<code>ThemeData</code></li>
+<li>Mantenha o backend independente de UI</li>
+<li>Documente endpoints e variáveis de ambiente ao expandir o
+backend</li>
+</ul>
+<h2 id="guia-de-contribuição">Guia de Contribuição</h2>
+<h3 id="fluxo-de-contribuição">Fluxo de Contribuição</h3>
+<ol type="1">
+<li>Faça um fork do repositório, ou crie uma branch no repositório
+principal se você tiver acesso.</li>
+<li>Crie uma branch de feature/desenvolvimento descrevendo a alteração:
+<ul>
+<li><code>feature/tema-alto-contraste</code></li>
+<li><code>fix/game-details-theme</code></li>
+</ul></li>
+<li>Faça commits pequenos e atômicos.</li>
+<li>Atualize a documentação quando necessário.</li>
+<li>Envie um Pull Request com descrição clara das mudanças e as
+telas/funcionalidades afetadas.</li>
+</ol>
+<h3 id="estilo-de-código">Estilo de Código</h3>
+<ul>
+<li>Use indentação consistente de 2 espaços em Dart/Flutter.</li>
+<li>Prefira <code>const</code> quando possível.</li>
+<li>Evite duplicação de lógica de tema; use <code>AppSettings</code>
+para cores e preferências.</li>
+<li>Decore o widget com <code>ListenableBuilder</code> ou
+<code>ValueListenableBuilder</code> quando precisar de atualizações
+reativas.</li>
+<li>Mantenha os widgets simples e extraia componentes reutilizáveis em
+<code>lib/widgets/</code>.</li>
+</ul>
+<h3 id="temas-e-acessibilidade">Temas e Acessibilidade</h3>
+<p>O projeto fornece suporte a alto contraste e escala de fonte via
+<code>AppSettings</code>:</p>
+<ul>
+<li><code>lib/services/app_settings.dart</code> — singleton com
+<code>ChangeNotifier</code></li>
+<li>Valores usados:
+<ul>
+<li><code>bgColor</code></li>
+<li><code>cardColor</code></li>
+<li><code>textColor</code></li>
+<li><code>mutedColor</code></li>
+<li><code>borderColor</code></li>
+<li><code>accentColor</code></li>
+<li><code>accentTextColor</code></li>
+</ul></li>
+<li>Use <code>SharedPreferences</code> para persistir as preferências do
+usuário.</li>
+<li>Evite cores codificadas no código sempre que possível.</li>
+</ul>
+<h3 id="testes-e-verificação">Testes e Verificação</h3>
+<ul>
+<li>Execute <code>flutter pub get</code> para instalar
+dependências.</li>
+<li>Use <code>flutter analyze</code> para verificar problemas de
+análise.</li>
+<li>Rode <code>flutter test</code> se houver testes automatizados
+disponíveis.</li>
+<li>No backend, use <code>npm test</code> quando houver testes ou
+execute o servidor local para validação funcional.</li>
+</ul>
+<h3 id="arquitetura-da-aplicação">Arquitetura da Aplicação</h3>
+<p>O app está organizado em camadas claras:</p>
+<ul>
+<li><code>lib/main.dart</code> — ponto de entrada e configuração de tema
+global</li>
+<li><code>lib/screens/</code> — telas da aplicação</li>
+<li><code>lib/widgets/</code> — componentes de interface
+reutilizáveis</li>
+<li><code>lib/services/</code> — serviços e integração com API/estado
+global</li>
+<li><code>lib/repositories/</code> — acesso a dados/autenticação</li>
+</ul>
+<h3 id="backend-1">Backend</h3>
+<p>O backend local está em <code>backend/backend/</code> e inclui:</p>
+<ul>
+<li><code>server.js</code> — servidor Express com rotas para auth,
+reviews, biblioteca e jogos</li>
+<li><code>package.json</code> — dependências Node</li>
+<li><code>.env</code> — variáveis de ambiente para conexão com banco e
+IGDB</li>
+</ul>
+<h3 id="qualidade-de-código">Qualidade de Código</h3>
+<ul>
+<li>Mantenha os arquivos de UI legíveis e separe lógica de apresentação
+da lógica de dados.</li>
+<li>Prefira arquiteturas baseadas em serviços e repositórios para evitar
+acoplamento.</li>
+<li>Documente novas rotas ou endpoints conforme adiciona
+funcionalidades.</li>
+</ul>
+<h3 id="pull-requests">Pull Requests</h3>
+<ul>
+<li>Mantenha a descrição curta e objetiva.</li>
+<li>Liste o que foi alterado e por quê.</li>
+<li>Referencie tickets ou issues se houver.</li>
+<li>Informe se a alteração requer mudanças em ambientes ou configurações
+externas.</li>
+</ul>
+<h2 id="como-rodar">Como Rodar</h2>
+<h3 id="pré-requisitos">Pré-requisitos</h3>
+<ul>
+<li>Flutter instalado</li>
+<li>Node.js instalado</li>
+<li>PostgreSQL disponível</li>
+<li>Conta e credenciais Supabase configuradas, se usadas</li>
+</ul>
+<h3 id="backend-2">Backend</h3>
+<ol type="1">
+<li><p>Acesse o diretório do backend:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> backend/backend</span></code></pre></div></li>
+<li><p>Instale dependências:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> install</span></code></pre></div></li>
+<li><p>Crie um arquivo <code>.env</code> com as variáveis:</p>
+<pre class="env"><code>DATABASE_URL=postgres://&lt;user&gt;:&lt;password&gt;@&lt;host&gt;:&lt;port&gt;/&lt;database&gt;
+JWT_SECRET=sua_chave_secreta
+TWITCH_CLIENT_ID=&lt;twitch_client_id&gt;
+TWITCH_ACCESS_TOKEN=&lt;twitch_access_token&gt;
+PORT=3000</code></pre></li>
+<li><p>Inicie o servidor:</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">node</span> server.js</span></code></pre></div></li>
+</ol>
+<h3 id="app-flutter">App Flutter</h3>
+<ol type="1">
+<li><p>No diretório raiz do projeto:</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> c:<span class="dt">\U</span>sers<span class="dt">\G</span>abriel<span class="dt">\G</span>amer-Letterbox</span></code></pre></div></li>
+<li><p>Instale dependências:</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">flutter</span> pub get</span></code></pre></div></li>
+<li><p>Execute o app:</p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="ex">flutter</span> run</span></code></pre></div></li>
+</ol>
+<h2 id="referências">Referências</h2>
+<ul>
+<li><code>README.md</code></li>
+<li><code>CONTRIBUTING.md</code></li>
+<li><code>ARCHITECTURE.md</code></li>
+<li><code>REQUIREMENTS.md</code></li>
+</ul>
+</body>
+</html>
