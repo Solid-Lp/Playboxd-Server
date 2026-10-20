@@ -584,6 +584,101 @@ app.get('/reviews/:game_id', async (req, res) => {
   }
 });
 // =========================
+// ACCOUNT - DELETE (exigido pela Google Play)
+// =========================
+
+app.delete('/account', authMiddleware, async (req, res) => {
+
+  const client = await pool.connect();
+
+  try {
+
+    await client.query('BEGIN');
+    await client.query('DELETE FROM reviews WHERE user_id = $1', [req.userId]);
+    await client.query('DELETE FROM library WHERE user_id = $1', [req.userId]);
+    await client.query('DELETE FROM users WHERE id = $1', [req.userId]);
+    await client.query('COMMIT');
+
+    res.json({ success: true, message: 'Conta excluída' });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.log(error);
+    res.status(500).json({ success: false, error: error.message });
+  } finally {
+    client.release();
+  }
+});
+
+
+// =========================
+// PÁGINAS PÚBLICAS (Google Play)
+// =========================
+
+const CONTACT_EMAIL = process.env.CONTACT_EMAIL || '';
+
+function publicPage(title, body) {
+  return `<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${title} - Playboxd</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 720px; margin: 0 auto; padding: 24px 16px; line-height: 1.6; background: #0d0d0d; color: #e6e6e6; }
+  h1, h2 { color: #39ff14; }
+  a { color: #39ff14; }
+</style>
+</head>
+<body>
+<h1>${title}</h1>
+${body}
+${CONTACT_EMAIL ? `<p>Contato: <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a></p>` : ''}
+</body>
+</html>`;
+}
+
+app.get('/privacy', (req, res) => {
+  res.send(publicPage('Política de Privacidade', `
+<p>Esta política descreve como o aplicativo Playboxd trata os seus dados.</p>
+
+<h2>Dados coletados</h2>
+<ul>
+  <li>Nome de usuário e e-mail, informados no cadastro.</li>
+  <li>Senha, armazenada apenas de forma criptografada (hash bcrypt).</li>
+  <li>Jogos adicionados à biblioteca, status e progresso.</li>
+  <li>Reviews e notas que você publica.</li>
+</ul>
+
+<h2>Uso dos dados</h2>
+<p>Os dados são usados somente para o funcionamento do app: login, biblioteca, reviews e estatísticas do perfil. O nome de usuário aparece junto às suas reviews, que são públicas para outros usuários.</p>
+
+<h2>Compartilhamento</h2>
+<p>Não vendemos nem compartilhamos seus dados com terceiros. As informações dos jogos (capas, notas, descrições) vêm da IGDB e nenhuma informação pessoal é enviada a ela.</p>
+
+<h2>Segurança</h2>
+<p>A comunicação entre o app e o servidor é feita por HTTPS.</p>
+
+<h2>Exclusão</h2>
+<p>Você pode excluir sua conta e todos os dados a qualquer momento. Veja <a href="/delete-account">como excluir sua conta</a>.</p>
+`));
+});
+
+app.get('/delete-account', (req, res) => {
+  res.send(publicPage('Excluir conta', `
+<p>Para excluir sua conta do Playboxd:</p>
+<ol>
+  <li>Abra o app e faça login.</li>
+  <li>Vá até a aba <strong>Profile</strong>.</li>
+  <li>Toque em <strong>EXCLUIR CONTA</strong> e confirme.</li>
+</ol>
+<p>Serão apagados permanentemente: sua conta (nome de usuário, e-mail e senha), sua biblioteca de jogos e todas as suas reviews. Nenhum dado é mantido após a exclusão.</p>
+${CONTACT_EMAIL ? '<p>Se não conseguir acessar o app, envie um e-mail a partir do endereço cadastrado pedindo a exclusão.</p>' : ''}
+`));
+});
+
+
+// =========================
 // TOP RATED GAMES (média do banco)
 // =========================
 

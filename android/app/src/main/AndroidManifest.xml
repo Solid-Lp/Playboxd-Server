@@ -7,7 +7,7 @@
         </intent>
     </queries>
     <application
-        android:label="projeto_letterbox"
+        android:label="Playboxd"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

@@ -105,6 +105,60 @@ class ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  Future<void> _deleteAccount() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Excluir conta'),
+        content: const Text(
+          'Sua conta, biblioteca e reviews serão apagadas permanentemente. Deseja continuar?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text(
+              'Excluir',
+              style: TextStyle(color: Colors.redAccent),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      final response = await http.delete(
+        Uri.parse('${ApiService.baseUrl}/account'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (data['success'] == true) {
+        await _logout();
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Não foi possível excluir a conta')),
+        );
+      }
+    } catch (e) {
+      debugPrint('Erro ao excluir conta: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Erro de conexão ao excluir a conta')),
+        );
+      }
+    }
+  }
+
   List<Map<String, dynamic>> get _favoriteGames => _library.take(3).toList();
 
   String _timeAgo(String? createdAt) {
@@ -156,6 +210,8 @@ class ProfileScreenState extends State<ProfileScreen> {
                     _buildActivity(text, accent),
                     const SizedBox(height: 32),
                     _buildLogout(),
+                    const SizedBox(height: 16),
+                    _buildDeleteAccount(),
                     const SizedBox(height: 40),
                   ],
                 ),
@@ -650,6 +706,35 @@ class ProfileScreenState extends State<ProfileScreen> {
                 'LOGOUT',
                 style: TextStyle(
                   color: Colors.redAccent,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDeleteAccount() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: GestureDetector(
+        onTap: _deleteAccount,
+        child: const SizedBox(
+          width: double.infinity,
+          height: 44,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.delete_forever, color: Colors.redAccent, size: 18),
+              SizedBox(width: 8),
+              Text(
+                'EXCLUIR CONTA',
+                style: TextStyle(
+                  color: Colors.redAccent,
+                  fontSize: 13,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 1,
                 ),
