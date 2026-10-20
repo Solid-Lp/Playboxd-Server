@@ -5,6 +5,6 @@ class ApiService {
 
   // ID do cliente OAuth do tipo "Aplicativo da Web" no Google Cloud
   static const String googleServerClientId =
-      '584856228103-cmqr3um53cr0oj0d428m6cp78su9jqar.apps.googleusercontent.com';
+      '584856228103-lehftm3e7dltei4eis5g7jp0ig0hm895.apps.googleusercontent.com';
 
 }
