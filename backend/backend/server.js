@@ -258,6 +258,18 @@ async function checkEmailCode(userId, purpose, code) {
   return null;
 }
 
+// Cadastros nunca confirmados são apagados depois de 24 h (os códigos saem
+// junto pelo ON DELETE CASCADE). Bem mais que a validade do código, para não
+// apagar a conta de quem só pediu "Reenviar código" um pouco depois.
+async function cleanupUnverifiedUsers() {
+  const result = await pool.query(
+    `DELETE FROM users
+     WHERE email_verified = false
+       AND created_at < NOW() - INTERVAL '24 hours'`
+  );
+  return result.rowCount;
+}
+
 async function findUserByEmail(email) {
   const result = await pool.query(
     'SELECT * FROM users WHERE LOWER(email) = $1',
@@ -291,18 +303,6 @@ app.post('/register', async (req, res) => {
 
     const normalizedEmail = email.trim().toLowerCase();
 
-    const existingUser = await pool.query(
-      'SELECT * FROM users WHERE LOWER(email) = $1',
-      [normalizedEmail]
-    );
-
-    if (existingUser.rows.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email já cadastrado',
-      });
-    }
-
     if (!password || password.length < MIN_PASSWORD_LENGTH) {
       return res.status(400).json({
         success: false,
@@ -310,19 +310,39 @@ app.post('/register', async (req, res) => {
       });
     }
 
+    await cleanupUnverifiedUsers();
+
+    const existingUser = await findUserByEmail(normalizedEmail);
+
+    if (existingUser && existingUser.email_verified) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email já cadastrado',
+      });
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const newUser = await pool.query(
-      `INSERT INTO users (username, email, password, email_verified)
-       VALUES ($1, $2, $3, false)
-       RETURNING *`,
-      [username, normalizedEmail, hashedPassword]
-    );
+    // E-mail ainda não confirmado não conta como cadastrado: refaz o cadastro.
+    // É seguro porque conta não confirmada nunca recebeu token (sem dados).
+    const userQuery = existingUser
+      ? await pool.query(
+          `UPDATE users SET username = $1, password = $2
+           WHERE id = $3
+           RETURNING *`,
+          [username, hashedPassword, existingUser.id]
+        )
+      : await pool.query(
+          `INSERT INTO users (username, email, password, email_verified)
+           VALUES ($1, $2, $3, false)
+           RETURNING *`,
+          [username, normalizedEmail, hashedPassword]
+        );
 
     let emailSent = true;
 
     try {
-      await sendEmailCode(newUser.rows[0], 'verify');
+      await sendEmailCode(userQuery.rows[0], 'verify');
     } catch (err) {
       console.log('Erro ao enviar código de verificação:', err.message);
       emailSent = false;
@@ -1169,4 +1189,10 @@ app.get('/top-rated', async (req, res) => {
 
 app.listen(process.env.PORT || 3000, () => {
   console.log('Servidor rodando');
+
+  cleanupUnverifiedUsers()
+    .then((count) => {
+      if (count > 0) console.log(`Cadastros não confirmados removidos: ${count}`);
+    })
+    .catch((err) => console.log('Erro na limpeza de cadastros:', err.message));
 });
