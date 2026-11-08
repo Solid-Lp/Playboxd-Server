@@ -273,10 +273,11 @@ class ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(width: 16),
               GestureDetector(
                 onTap: () {
+                  // Recarrega ao voltar: o nome de usuário pode ter mudado
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const SettingsScreen()),
-                  );
+                  ).then((_) => loadProfile());
                 },
                 child: Icon(Icons.settings_outlined, color: text, size: 24),
               ),

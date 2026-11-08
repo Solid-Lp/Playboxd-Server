@@ -279,6 +279,38 @@ async function findUserByEmail(email) {
   return result.rows[0];
 }
 
+const USERNAME_MIN = 3;
+const USERNAME_MAX = 20;
+
+// Retorna a mensagem de erro para o usuário, ou null se o nome for válido.
+// excludeUserId: dono atual do nome (pode manter o próprio nome).
+async function validateUsername(username, excludeUserId) {
+  const name = String(username || '').trim();
+
+  if (name.length < USERNAME_MIN || name.length > USERNAME_MAX) {
+    return `O nome deve ter entre ${USERNAME_MIN} e ${USERNAME_MAX} caracteres`;
+  }
+
+  if (!/^[\p{L}\p{N} _.-]+$/u.test(name)) {
+    return 'Use apenas letras, números, espaço, ponto, hífen ou _';
+  }
+
+  if (usernameHasBlockedWord(name)) {
+    return 'Este nome de usuário não é permitido. Escolha outro.';
+  }
+
+  const taken = await pool.query(
+    'SELECT 1 FROM users WHERE LOWER(username) = LOWER($1) AND id <> $2',
+    [name, excludeUserId || 0]
+  );
+
+  if (taken.rows.length > 0) {
+    return 'Este nome de usuário já está em uso';
+  }
+
+  return null;
+}
+
 
 // =========================
 // TESTE API
@@ -300,16 +332,11 @@ app.post('/register', async (req, res) => {
 
   try {
 
-    const { username, email, password } = req.body;
+    const { email, password } = req.body;
+
+    const username = String(req.body.username || '').trim();
 
     const normalizedEmail = email.trim().toLowerCase();
-
-    if (usernameHasBlockedWord(username)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Este nome de usuário não é permitido. Escolha outro.',
-      });
-    }
 
     if (!password || password.length < MIN_PASSWORD_LENGTH) {
       return res.status(400).json({
@@ -327,6 +354,12 @@ app.post('/register', async (req, res) => {
         success: false,
         message: 'Email já cadastrado',
       });
+    }
+
+    const usernameError = await validateUsername(username, existingUser?.id);
+
+    if (usernameError) {
+      return res.status(400).json({ success: false, message: usernameError });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -494,8 +527,8 @@ app.post('/auth/google', async (req, res) => {
         || `player${crypto.randomInt(10000, 100000)}`;
 
       userQuery = await pool.query(
-        `INSERT INTO users (username, email, password, google_id, avatar_url, email_verified)
-         VALUES ($1, $2, NULL, $3, $4, true)
+        `INSERT INTO users (username, email, password, google_id, avatar_url, email_verified, username_set)
+         VALUES ($1, $2, NULL, $3, $4, true, false)
          RETURNING *`,
         [username, email, googleId, payload.picture || null]
       );
@@ -503,21 +536,47 @@ app.post('/auth/google', async (req, res) => {
 
     const user = userQuery.rows[0];
 
-    const token = jwt.sign(
-      { id: user.id },
-      process.env.JWT_SECRET
+    // Conta criada pelo Google ainda usa o nome do Google: o app pede um nome
+    res.json({
+      ...authResponse(user),
+      needsUsername: !user.username_set,
+    });
+
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+
+// =========================
+// TROCAR NOME DE USUÁRIO
+// =========================
+
+app.patch('/profile/username', authMiddleware, async (req, res) => {
+
+  try {
+
+    const username = String(req.body.username || '').trim();
+
+    const error = await validateUsername(username, req.userId);
+
+    if (error) {
+      return res.status(400).json({ success: false, message: error });
+    }
+
+    const result = await pool.query(
+      `UPDATE users SET username = $1, username_set = true
+       WHERE id = $2
+       RETURNING username`,
+      [username, req.userId]
     );
 
-    res.json({
-      success: true,
-      token,
-      user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        avatar_url: user.avatar_url,
-      },
-    });
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Usuário não encontrado' });
+    }
+
+    res.json({ success: true, username: result.rows[0].username });
 
   } catch (error) {
     console.log(error);

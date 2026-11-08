@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../screens/app_shell.dart';
+import '../screens/choose_username_screen.dart';
 
 // Salva a sessão devolvida pelo backend (/login, /auth/google, /verify-email)
 // e abre o app, removendo as telas de login/cadastro do histórico.
@@ -38,12 +39,20 @@ Future<void> startSession(
     ),
   );
 
+  // Conta criada pelo Google: escolhe o nome antes de entrar no app
+  final needsUsername = data['needsUsername'] == true;
+
   Navigator.pushAndRemoveUntil(
 
     context,
 
     MaterialPageRoute(
-      builder: (_) => const AppShell(),
+      builder: (_) => needsUsername
+          ? ChooseUsernameScreen(
+              initialUsername: data['user']['username'] ?? '',
+              onboarding: true,
+            )
+          : const AppShell(),
     ),
 
     (_) => false,

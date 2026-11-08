@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/app_settings.dart';
+import 'choose_username_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -11,6 +13,32 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   final _settings = AppSettings();
+
+  String _username = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUsername();
+  }
+
+  Future<void> _loadUsername() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) setState(() => _username = prefs.getString('username') ?? '');
+  }
+
+  Future<void> _editUsername() async {
+    final newName = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ChooseUsernameScreen(
+          initialUsername: _username,
+          onboarding: false,
+        ),
+      ),
+    );
+    if (newName != null && mounted) setState(() => _username = newName);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -60,6 +88,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+
+                        // Seção Conta
+                        Text(
+                          'CONTA',
+                          style: TextStyle(
+                            color: accent,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.5,
+                          ),
+                        ),
+
+                        const SizedBox(height: 12),
+
+                        _buildUsernameTile(
+                          cardColor: card,
+                          textColor: text,
+                          mutedColor: muted,
+                          borderColor: border,
+                          accentColor: accent,
+                        ),
+
+                        const SizedBox(height: 32),
 
                         // Seção Acessibilidade
                         Text(
@@ -130,6 +181,63 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildUsernameTile({
+    required Color cardColor,
+    required Color textColor,
+    required Color mutedColor,
+    required Color borderColor,
+    required Color accentColor,
+  }) {
+    return GestureDetector(
+      onTap: _editUsername,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: cardColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: borderColor),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: accentColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(Icons.person_outline, color: accentColor, size: 20),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Nome de usuário',
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    _username,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: mutedColor, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, color: mutedColor),
+          ],
+        ),
+      ),
     );
   }
 
