@@ -5,21 +5,33 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const axios = require('axios');
 const { OAuth2Client } = require('google-auth-library');
-const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 
 require('dotenv').config();
 
 const googleClient = new OAuth2Client();
 
-const mailer = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    // Senha de app do Google costuma ser copiada com espaços
-    pass: (process.env.EMAIL_APP_PASSWORD || '').replace(/\s/g, ''),
-  },
-});
+// O plano gratuito do Render bloqueia SMTP (portas 25/465/587), então os
+// e-mails saem pela API HTTPS do Brevo.
+async function sendEmail({ to, toName, subject, text, html }) {
+  await axios.post(
+    'https://api.brevo.com/v3/smtp/email',
+    {
+      sender: { name: 'Playboxd', email: process.env.EMAIL_USER },
+      to: [{ email: to, name: toName }],
+      subject,
+      textContent: text,
+      htmlContent: html,
+    },
+    {
+      headers: {
+        'api-key': process.env.BREVO_API_KEY,
+        'Content-Type': 'application/json',
+      },
+      timeout: 15000,
+    }
+  );
+}
 
 const app = express();
 
@@ -176,20 +188,33 @@ async function sendEmailCode(user, purpose) {
 
   const { subject, intro } = CODE_EMAILS[purpose];
 
-  await mailer.sendMail({
-    from: `"Playboxd" <${process.env.EMAIL_USER}>`,
-    to: user.email,
-    subject,
-    text: `Olá, ${user.username}!\n\n${intro}\n\n${code}\n\nO código expira em ${CODE_TTL_MINUTES} minutos. Se você não fez esse pedido, ignore este e-mail.`,
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px; background: #020817; color: #e6e6e6; border-radius: 16px;">
-        <h1 style="color: #39ff14; margin: 0 0 16px;">PLAYBOXD</h1>
-        <p>Olá, ${user.username}!</p>
-        <p>${intro}</p>
-        <p style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #39ff14; text-align: center; margin: 24px 0;">${code}</p>
-        <p style="color: #9aa4b2; font-size: 13px;">O código expira em ${CODE_TTL_MINUTES} minutos. Se você não fez esse pedido, ignore este e-mail.</p>
-      </div>`,
-  });
+  // O nome de usuário é digitado pelo usuário: escapa antes de pôr no HTML
+  const safeName = String(user.username).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+
+  try {
+    await sendEmail({
+      to: user.email,
+      toName: user.username,
+      subject,
+      text: `Olá, ${user.username}!\n\n${intro}\n\n${code}\n\nO código expira em ${CODE_TTL_MINUTES} minutos. Se você não fez esse pedido, ignore este e-mail.`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px; background: #020817; color: #e6e6e6; border-radius: 16px;">
+          <h1 style="color: #39ff14; margin: 0 0 16px;">PLAYBOXD</h1>
+          <p>Olá, ${safeName}!</p>
+          <p>${intro}</p>
+          <p style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #39ff14; text-align: center; margin: 24px 0;">${code}</p>
+          <p style="color: #9aa4b2; font-size: 13px;">O código expira em ${CODE_TTL_MINUTES} minutos. Se você não fez esse pedido, ignore este e-mail.</p>
+        </div>`,
+    });
+  } catch (err) {
+    // Sem isso o código não enviado bloquearia um novo pedido por CODE_RESEND_SECONDS
+    await pool.query(
+      'DELETE FROM email_codes WHERE user_id = $1 AND purpose = $2',
+      [user.id, purpose]
+    );
+    console.log('Erro no envio pelo Brevo:', err.response?.data || err.message);
+    throw err;
+  }
 
   return true;
 }
