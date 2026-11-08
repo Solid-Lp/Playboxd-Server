@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/api_service.dart';
 import 'game_details_screen.dart';
+import 'search_screen.dart';
 
 class LibraryScreen extends StatefulWidget {
   final VoidCallback? onProfileTap;
@@ -171,7 +172,12 @@ class LibraryScreenState extends State<LibraryScreen> {
           Row(
             children: [
               IconButton(
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SearchScreen()),
+                  );
+                },
                 icon: const Icon(Icons.search, color: Colors.white),
               ),
               GestureDetector(

@@ -11,10 +11,14 @@ import '../services/google_auth_service.dart';
 import 'my_reviews_screen.dart';
 import 'game_details_screen.dart';
 import 'login_screen.dart';
+import 'search_screen.dart';
 import 'settings_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  // Troca para a aba Library da barra inferior ("View All" de My Library)
+  final VoidCallback? onLibraryTap;
+
+  const ProfileScreen({super.key, this.onLibraryTap});
 
   @override
   State<ProfileScreen> createState() => ProfileScreenState();
@@ -257,7 +261,15 @@ class ProfileScreenState extends State<ProfileScreen> {
           ),
           Row(
             children: [
-              Icon(Icons.search, color: text, size: 24),
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SearchScreen()),
+                  );
+                },
+                child: Icon(Icons.search, color: text, size: 24),
+              ),
               const SizedBox(width: 16),
               GestureDetector(
                 onTap: () {
@@ -402,19 +414,22 @@ class ProfileScreenState extends State<ProfileScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Favorite Games',
+                'My Library',
                 style: TextStyle(
                   color: text,
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              Text(
-                'View All',
-                style: TextStyle(
-                  color: accent,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
+              GestureDetector(
+                onTap: widget.onLibraryTap,
+                child: Text(
+                  'View All',
+                  style: TextStyle(
+                    color: accent,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],

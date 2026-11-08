@@ -40,7 +40,10 @@ class _AppShellState extends State<AppShell> {
                 key: _libraryKey,
                 onProfileTap: () => _selectTab(2),
               ),
-              ProfileScreen(key: _profileKey),
+              ProfileScreen(
+                key: _profileKey,
+                onLibraryTap: () => _selectTab(1),
+              ),
             ],
           ),
           bottomNavigationBar: BottomNavbar(

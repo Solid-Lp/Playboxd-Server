@@ -438,7 +438,21 @@ class _MainScreenState extends State<MainScreen> {
           final reviewCount = game['review_count'] ?? 0;
           final coverUrl = game['cover_url'] ?? '';
 
-          return Container(
+          return GestureDetector(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => GameDetailsScreen(
+                  game: {
+                    'id': game['game_id'],
+                    'name': game['game_name'] ?? '',
+                    'rating': 0,
+                  },
+                  imageUrl: coverUrl.toString(),
+                ),
+              ),
+            ),
+            child: Container(
             margin: const EdgeInsets.only(bottom: 12),
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
@@ -530,6 +544,7 @@ class _MainScreenState extends State<MainScreen> {
                   ),
                 ),
               ],
+            ),
             ),
           );
         }),
