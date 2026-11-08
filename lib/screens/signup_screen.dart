@@ -7,6 +7,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 
 import '../services/api_service.dart';
 import 'login_screen.dart';
@@ -234,6 +235,35 @@ class _SignupScreenState extends State<SignupScreen> {
                                 ),
                       ),
                     ),
+
+                    const SizedBox(height: 16),
+
+                    Center(
+                      child: Wrap(
+                        alignment: WrapAlignment.center,
+
+                        children: [
+                          const Text(
+                            'Ao criar uma conta, você concorda com os ',
+                            style: TextStyle(color: Colors.white54, fontSize: 13),
+                          ),
+
+                          buildLink('Termos de Uso', '/terms'),
+
+                          const Text(
+                            ' e a ',
+                            style: TextStyle(color: Colors.white54, fontSize: 13),
+                          ),
+
+                          buildLink('Política de Privacidade', '/privacy'),
+
+                          const Text(
+                            '.',
+                            style: TextStyle(color: Colors.white54, fontSize: 13),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -261,6 +291,27 @@ class _SignupScreenState extends State<SignupScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget buildLink(String label, String path) {
+    return GestureDetector(
+      onTap: () => launchUrl(
+        Uri.parse('${ApiService.baseUrl}$path'),
+        mode: LaunchMode.externalApplication,
+      ),
+
+      child: Text(
+        label,
+
+        style: const TextStyle(
+          color: Color(0xFF39FF14),
+          fontSize: 13,
+          fontWeight: FontWeight.bold,
+          decoration: TextDecoration.underline,
+          decorationColor: Color(0xFF39FF14),
+        ),
       ),
     );
   }

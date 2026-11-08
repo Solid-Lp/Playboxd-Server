@@ -6,6 +6,7 @@ const jwt = require('jsonwebtoken');
 const axios = require('axios');
 const { OAuth2Client } = require('google-auth-library');
 const crypto = require('crypto');
+const { usernameHasBlockedWord, isReviewBlocked } = require('./moderation');
 
 require('dotenv').config();
 
@@ -303,6 +304,13 @@ app.post('/register', async (req, res) => {
 
     const normalizedEmail = email.trim().toLowerCase();
 
+    if (usernameHasBlockedWord(username)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Este nome de usuário não é permitido. Escolha outro.',
+      });
+    }
+
     if (!password || password.length < MIN_PASSWORD_LENGTH) {
       return res.status(400).json({
         success: false,
@@ -479,7 +487,11 @@ app.post('/auth/google', async (req, res) => {
     }
 
     if (userQuery.rows.length === 0) {
-      const username = payload.name || email.split('@')[0];
+      // Nome do Google impróprio: usa a parte antes do @, ou um nome neutro
+      const emailName = email.split('@')[0];
+      const username = [payload.name, emailName]
+        .find((name) => name && !usernameHasBlockedWord(name))
+        || `player${crypto.randomInt(10000, 100000)}`;
 
       userQuery = await pool.query(
         `INSERT INTO users (username, email, password, google_id, avatar_url, email_verified)
@@ -917,6 +929,14 @@ app.post('/reviews', authMiddleware, async (req, res) => {
 
     const { game_id, game_name, cover_url, rating, review_text } = req.body;
 
+    if (await isReviewBlocked(review_text)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Sua review contém linguagem ofensiva ou discriminatória. '
+          + 'Critique o jogo à vontade, mas sem ofender pessoas ou grupos.',
+      });
+    }
+
     const result = await pool.query(
       `INSERT INTO reviews (user_id, game_id, game_name, cover_url, rating, review_text)
        VALUES ($1, $2, $3, $4, $5, $6)
@@ -1098,8 +1118,20 @@ app.get('/privacy', (req, res) => {
 <h2>Uso dos dados</h2>
 <p>Os dados são usados somente para o funcionamento do app: login, biblioteca, reviews e estatísticas do perfil. O e-mail também é usado para enviar códigos de verificação e de recuperação de senha. O nome de usuário aparece junto às suas reviews, que são públicas para outros usuários.</p>
 
-<h2>Compartilhamento</h2>
-<p>Não vendemos nem compartilhamos seus dados com terceiros. As informações dos jogos (capas, notas, descrições) vêm da IGDB e nenhuma informação pessoal é enviada a ela.</p>
+<h2>Serviços que tratam seus dados</h2>
+<p>Não vendemos seus dados. Para o app funcionar, usamos prestadores de serviço que tratam os dados apenas em nosso nome e para a finalidade indicada:</p>
+<ul>
+  <li><strong>Render</strong>: hospedagem do servidor do app.</li>
+  <li><strong>Neon</strong>: banco de dados onde ficam sua conta, biblioteca e reviews.</li>
+  <li><strong>Brevo</strong>: envio dos e-mails com códigos de verificação e de recuperação de senha (recebe seu e-mail e nome de usuário).</li>
+  <li><strong>OpenAI</strong>: moderação automática do texto das reviews, para bloquear conteúdo ofensivo ou discriminatório.</li>
+  <li><strong>Google</strong>: login com Google, quando você escolhe essa opção.</li>
+</ul>
+<p>Alguns desses serviços ficam fora do Brasil, então seus dados podem ser transferidos e tratados em outros países, com medidas de segurança adequadas.</p>
+<p>As informações dos jogos (capas, notas, descrições) vêm da IGDB, e nenhuma informação pessoal é enviada a ela.</p>
+
+<h2>Moderação automática</h2>
+<p>Nomes de usuário e reviews passam por filtros automáticos. Conteúdo que viole os <a href="/terms">Termos de Uso</a> pode ser recusado no momento da publicação.</p>
 
 <h2>Segurança</h2>
 <p>A comunicação entre o app e o servidor é feita por HTTPS.</p>
@@ -1109,6 +1141,56 @@ app.get('/privacy', (req, res) => {
 
 <h2>Segurança infantil</h2>
 <p>Veja nossos <a href="/child-safety">padrões contra abuso e exploração sexual infantil</a>.</p>
+`));
+});
+
+app.get('/terms', (req, res) => {
+  res.send(publicPage('Termos de Uso', `
+<p>Bem-vindo ao Playboxd! Ao criar uma conta ou usar o app, você concorda com estes termos. Eles existem para manter a comunidade um lugar bom para todo mundo que gosta de jogos.</p>
+
+<h2>1. Sua conta</h2>
+<ul>
+  <li>Você precisa ter pelo menos 13 anos para usar o Playboxd.</li>
+  <li>Use um e-mail seu e mantenha sua senha em segurança. Você é responsável pelo que acontece na sua conta.</li>
+  <li>Escolha um nome de usuário respeitoso e não se passe por outra pessoa.</li>
+</ul>
+
+<h2>2. Regras da comunidade</h2>
+<p><strong>Critique o jogo, não as pessoas.</strong> Pode dizer que um jogo é ruim, que o final decepcionou ou que não vale o preço. O que não é permitido:</p>
+<ul>
+  <li><strong>Discurso de ódio</strong>: racismo, homofobia, transfobia, machismo, xenofobia, capacitismo, intolerância religiosa ou qualquer ataque a pessoas por quem elas são.</li>
+  <li><strong>Assédio e ameaças</strong>: xingar, humilhar ou ameaçar outros jogadores, desenvolvedores ou qualquer pessoa.</li>
+  <li><strong>Conteúdo sexual explícito</strong>, e qualquer conteúdo que sexualize menores (veja nossos <a href="/child-safety">padrões de segurança infantil</a>).</li>
+  <li><strong>Spam e propaganda</strong>: links, divulgação ou mensagens repetidas.</li>
+  <li><strong>Dados pessoais de outras pessoas</strong>, como telefone, endereço ou redes sociais.</li>
+  <li><strong>Spoilers sem aviso</strong>: se for contar algo importante da história, avise no começo da review.</li>
+</ul>
+
+<h2>3. Moderação</h2>
+<ul>
+  <li>Nomes de usuário e reviews passam por filtros automáticos e podem ser recusados se violarem estas regras.</li>
+  <li>Podemos remover conteúdo e suspender ou excluir contas que desrespeitem os termos, sem aviso prévio nos casos graves.</li>
+  <li>Se encontrar algo que viole as regras${CONTACT_EMAIL ? `, avise pelo e-mail <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a>` : ', avise pelo contato informado na página do app na Google Play'}.</li>
+</ul>
+
+<h2>4. Seu conteúdo</h2>
+<ul>
+  <li>Suas reviews são suas, e você é responsável pelo que escreve.</li>
+  <li>Ao publicar, você permite que o Playboxd exiba a review e seu nome de usuário para outros usuários do app.</li>
+  <li>Se você excluir sua conta, suas reviews e sua biblioteca são apagadas.</li>
+</ul>
+
+<h2>5. Sobre o app</h2>
+<ul>
+  <li>As informações dos jogos vêm da IGDB. Nomes, capas e marcas pertencem aos seus respectivos donos.</li>
+  <li>O Playboxd é oferecido como está. Podemos mudar recursos ou ficar fora do ar temporariamente.</li>
+  <li>Estes termos podem ser atualizados, e a versão mais recente fica sempre nesta página.</li>
+</ul>
+
+<h2>6. Privacidade</h2>
+<p>Veja como tratamos seus dados na nossa <a href="/privacy">Política de Privacidade</a>.</p>
+
+<p>Estes termos seguem as leis do Brasil.</p>
 `));
 });
 

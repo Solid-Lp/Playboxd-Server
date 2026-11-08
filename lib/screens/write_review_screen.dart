@@ -102,7 +102,7 @@ class _WriteReviewScreenState extends State<WriteReviewScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erro: ${e.toString()}'),
+            content: Text(e.toString().replaceFirst('Exception: ', '')),
             backgroundColor: Colors.redAccent,
           ),
         );
