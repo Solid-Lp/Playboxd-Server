@@ -32,9 +32,22 @@ CREATE TABLE IF NOT EXISTS users (
   token_version   INTEGER NOT NULL DEFAULT 0
 );
 
-ALTER TABLE users
-  ADD COLUMN IF NOT EXISTS username_set BOOLEAN NOT NULL DEFAULT true,
-  ADD COLUMN IF NOT EXISTS token_version INTEGER NOT NULL DEFAULT 0;
+-- Migração de bancos criados antes dessas colunas
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = current_schema()
+      AND table_name = 'users' AND column_name = 'username_set'
+  ) THEN
+    ALTER TABLE users ADD COLUMN username_set BOOLEAN NOT NULL DEFAULT true;
+    -- Contas só do Google ainda não escolheram o nome
+    UPDATE users SET username_set = false
+    WHERE google_id IS NOT NULL AND password IS NULL;
+  END IF;
+END $$;
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER NOT NULL DEFAULT 0;
 
 
 -- -------------------------------------------------------------
@@ -73,6 +86,36 @@ CREATE TABLE IF NOT EXISTS reviews (
   CONSTRAINT reviews_user_game_unique UNIQUE (user_id, game_id),
   CONSTRAINT reviews_rating_range CHECK (rating BETWEEN 1 AND 5)
 );
+
+-- Migração de bancos criados antes dessas regras: apaga as reviews
+-- antigas fora do padrão e cria as regras
+DO $$
+BEGIN
+  -- Primeiro as notas inválidas, para uma duplicata válida não ser
+  -- apagada no lugar de uma mais recente com nota inválida
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'reviews'::regclass AND conname = 'reviews_rating_range'
+  ) THEN
+    DELETE FROM reviews WHERE rating NOT BETWEEN 1 AND 5;
+
+    ALTER TABLE reviews ADD CONSTRAINT reviews_rating_range CHECK (rating BETWEEN 1 AND 5);
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'reviews'::regclass AND conname = 'reviews_user_game_unique'
+  ) THEN
+    -- Mais de uma review do mesmo usuário no mesmo jogo: fica só a mais recente
+    DELETE FROM reviews r
+    USING reviews newer
+    WHERE newer.user_id = r.user_id
+      AND newer.game_id = r.game_id
+      AND newer.id > r.id;
+
+    ALTER TABLE reviews ADD CONSTRAINT reviews_user_game_unique UNIQUE (user_id, game_id);
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_reviews_user_id ON reviews (user_id);
 
