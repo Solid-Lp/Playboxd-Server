@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../screens/app_shell.dart';
 import '../screens/choose_username_screen.dart';
+import 'current_user.dart';
 import 'session_store.dart';
 
 // Salva a sessão devolvida pelo backend (/login, /auth/google, /verify-email)
@@ -17,10 +18,7 @@ Future<void> startSession(
 
   await SessionStore.setToken(data['token']);
 
-  await prefs.setString(
-    'username',
-    data['user']['username'],
-  );
+  await CurrentUser().setFromServer(data['user']);
 
   await prefs.setString(
     'email',

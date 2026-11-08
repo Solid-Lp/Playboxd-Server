@@ -7,6 +7,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../services/api_service.dart';
 import '../services/app_settings.dart';
+import '../services/current_user.dart';
+import '../widgets/user_avatar.dart';
 
 import '../widgets/game_grid_card.dart';
 import '../widgets/game_horizontal_card.dart';
@@ -201,10 +203,12 @@ class _MainScreenState extends State<MainScreen> {
               ),
               GestureDetector(
                 onTap: widget.onProfileTap,
-                child: CircleAvatar(
-                  radius: 20,
-                  backgroundColor: accent,
-                  child: Icon(Icons.person, color: _settings.accentTextColor),
+                child: ListenableBuilder(
+                  listenable: CurrentUser(),
+                  builder: (context, _) => UserAvatar(
+                    username: CurrentUser().username,
+                    colorKey: CurrentUser().avatarColor,
+                  ),
                 ),
               ),
             ],
@@ -382,6 +386,7 @@ class _MainScreenState extends State<MainScreen> {
             review: review['review_text'] ?? '',
             user: review['username'] ?? '',
             rating: (review['rating'] ?? '0').toString(),
+            avatarColor: review['avatar_color']?.toString(),
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(

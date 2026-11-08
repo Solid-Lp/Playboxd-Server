@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/api_service.dart';
 import '../services/google_auth_service.dart';
+import '../services/current_user.dart';
 import '../services/session_store.dart';
 import '../widgets/auth_input.dart';
 import 'app_shell.dart';
@@ -55,8 +56,6 @@ class _ChooseUsernameScreenState extends State<ChooseUsernameScreen> {
         loading = true;
       });
 
-      final prefs = await SharedPreferences.getInstance();
-
       final response = await http.patch(
         Uri.parse('${ApiService.baseUrl}/profile/username'),
 
@@ -76,7 +75,7 @@ class _ChooseUsernameScreenState extends State<ChooseUsernameScreen> {
         return;
       }
 
-      await prefs.setString('username', data['username']);
+      await CurrentUser().update(username: data['username']);
 
       if (!mounted) return;
 
@@ -115,6 +114,8 @@ class _ChooseUsernameScreenState extends State<ChooseUsernameScreen> {
     await prefs.clear();
 
     await SessionStore.clear();
+
+    CurrentUser().clear();
 
     GoogleAuthService.signOut();
 

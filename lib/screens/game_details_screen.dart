@@ -342,6 +342,7 @@ class _GameDetailsScreenState extends State<GameDetailsScreen> {
           date: _timeAgo(r['created_at']?.toString()),
           rating: double.tryParse(r['rating'].toString()) ?? 0,
           libraryStatus: r['library_status']?.toString(),
+          avatarColor: r['avatar_color']?.toString(),
         );
       }).toList(),
     );

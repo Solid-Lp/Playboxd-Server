@@ -8,11 +8,13 @@ import 'screens/app_shell.dart';
 import 'screens/login_screen.dart';
 import 'services/api_service.dart';
 import 'services/app_settings.dart';
+import 'services/current_user.dart';
 import 'services/session_store.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await AppSettings().load();
+  await CurrentUser().load();
   runApp(MyApp());
 }
 
@@ -52,8 +54,8 @@ class MyApp extends StatelessWidget {
       if (data['success'] == true) {
         final prefs = await SharedPreferences.getInstance();
         await SessionStore.setToken(data['token']);
-        await prefs.setString('username', data['user']['username']);
         await prefs.setString('email', data['user']['email']);
+        await CurrentUser().setFromServer(data['user']);
       }
     } catch (e) {
       // Sem internet ou servidor acordando: segue com o token atual

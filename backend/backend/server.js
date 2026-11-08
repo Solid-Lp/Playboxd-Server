@@ -247,6 +247,7 @@ function authResponse(user) {
       username: user.username,
       email: user.email,
       avatar_url: user.avatar_url,
+      avatar_color: user.avatar_color,
     },
   };
 }
@@ -668,6 +669,36 @@ app.patch('/profile/username', authMiddleware, writeLimiter, async (req, res) =>
     }
 
     res.json({ success: true, username: result.rows[0].username });
+
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+
+// =========================
+// AVATAR (null = inicial do nome no estilo padrão)
+// =========================
+
+const AVATAR_COLORS = ['green', 'blue', 'red', 'purple'];
+
+app.patch('/profile/avatar', authMiddleware, writeLimiter, async (req, res) => {
+
+  try {
+
+    const { avatar_color } = req.body;
+
+    if (avatar_color !== null && !AVATAR_COLORS.includes(avatar_color)) {
+      return res.status(400).json({ success: false, message: 'Cor de avatar inválida' });
+    }
+
+    await pool.query(
+      'UPDATE users SET avatar_color = $1 WHERE id = $2',
+      [avatar_color, req.userId]
+    );
+
+    res.json({ success: true, avatar_color });
 
   } catch (error) {
     console.log(error);
@@ -1111,7 +1142,7 @@ app.get('/reviews/popular', async (req, res) => {
   try {
 
     const result = await pool.query(
-      `SELECT r.id, r.game_id, r.game_name, r.cover_url, r.rating, r.review_text, r.created_at, u.username
+      `SELECT r.id, r.game_id, r.game_name, r.cover_url, r.rating, r.review_text, r.created_at, u.username, u.avatar_color
        FROM reviews r
        JOIN users u ON u.id = r.user_id
        ORDER BY r.created_at DESC
@@ -1375,7 +1406,7 @@ app.get('/reviews/:game_id', async (req, res) => {
     const { game_id } = req.params;
 
     const result = await pool.query(
-      `SELECT r.id, r.game_id, r.game_name, r.cover_url, r.rating, r.review_text, r.created_at, u.username,
+      `SELECT r.id, r.game_id, r.game_name, r.cover_url, r.rating, r.review_text, r.created_at, u.username, u.avatar_color,
               l.status AS library_status
        FROM reviews r
        JOIN users u ON u.id = r.user_id

@@ -21,7 +21,10 @@ CREATE TABLE IF NOT EXISTS users (
   email           TEXT NOT NULL UNIQUE,
   -- NULL em contas criadas só com o Google
   password        TEXT,
+  -- Foto da conta Google (não exibida pelo app)
   avatar_url      TEXT,
+  -- NULL = inicial do nome no estilo padrão; ou 'green' | 'blue' | 'red' | 'purple'
+  avatar_color    TEXT,
   created_at      TIMESTAMP DEFAULT NOW(),
   google_id       TEXT UNIQUE,
   -- Contas por e-mail só entram depois de confirmar o código
@@ -48,6 +51,7 @@ BEGIN
 END $$;
 
 ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_color TEXT;
 
 
 -- -------------------------------------------------------------

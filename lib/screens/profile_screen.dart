@@ -7,8 +7,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/api_service.dart';
 import '../services/app_settings.dart';
+import '../services/current_user.dart';
 import '../services/google_auth_service.dart';
 import '../services/session_store.dart';
+import '../widgets/user_avatar.dart';
+import 'choose_avatar_screen.dart';
 import 'my_reviews_screen.dart';
 import 'game_details_screen.dart';
 import 'login_screen.dart';
@@ -115,6 +118,7 @@ class ProfileScreenState extends State<ProfileScreen> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
     await SessionStore.clear();
+    CurrentUser().clear();
     // Permite escolher outra conta Google no próximo login (sem bloquear a saída)
     GoogleAuthService.signOut();
     if (mounted) {
@@ -293,24 +297,18 @@ class ProfileScreenState extends State<ProfileScreen> {
     return Center(
       child: Stack(
         children: [
-          Container(
-            width: 100,
-            height: 100,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: accent, width: 2.5),
-              color: const Color(0xFF111827),
+          // Tocar no avatar abre a escolha de cor
+          GestureDetector(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ChooseAvatarScreen()),
             ),
-            child: ClipOval(
-              child: Center(
-                child: Text(
-                  _username.isNotEmpty ? _username[0].toUpperCase() : 'P',
-                  style: TextStyle(
-                    color: accent,
-                    fontSize: 40,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+            child: ListenableBuilder(
+              listenable: CurrentUser(),
+              builder: (context, _) => UserAvatar(
+                username: _username,
+                colorKey: CurrentUser().avatarColor,
+                size: 100,
               ),
             ),
           ),

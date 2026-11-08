@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'user_avatar.dart';
+
 class ReviewCard extends StatelessWidget {
   final String game;
 
@@ -8,6 +10,9 @@ class ReviewCard extends StatelessWidget {
   final String user;
 
   final String rating;
+
+  // Cor do avatar de quem escreveu (null = inicial no estilo padrão)
+  final String? avatarColor;
 
   final VoidCallback? onTap;
 
@@ -21,6 +26,8 @@ class ReviewCard extends StatelessWidget {
     required this.user,
 
     required this.rating,
+
+    this.avatarColor,
 
     this.onTap,
   });
@@ -50,10 +57,7 @@ class ReviewCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const CircleAvatar(
-                backgroundColor: Color(0xFF39FF14),
-                child: Icon(Icons.person, color: Colors.black),
-              ),
+              UserAvatar(username: user, colorKey: avatarColor),
 
               const SizedBox(width: 12),
 

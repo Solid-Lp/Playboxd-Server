@@ -5,7 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import '../services/api_service.dart';
+import '../services/current_user.dart';
 import '../services/session_store.dart';
+import '../widgets/user_avatar.dart';
 import 'game_details_screen.dart';
 import 'search_screen.dart';
 
@@ -179,10 +181,12 @@ class LibraryScreenState extends State<LibraryScreen> {
               ),
               GestureDetector(
                 onTap: widget.onProfileTap,
-                child: const CircleAvatar(
-                  radius: 20,
-                  backgroundColor: Color(0xFF39FF14),
-                  child: Icon(Icons.person, color: Colors.black),
+                child: ListenableBuilder(
+                  listenable: CurrentUser(),
+                  builder: (context, _) => UserAvatar(
+                    username: CurrentUser().username,
+                    colorKey: CurrentUser().avatarColor,
+                  ),
                 ),
               ),
             ],

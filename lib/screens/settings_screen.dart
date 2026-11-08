@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/app_settings.dart';
+import '../services/current_user.dart';
+import '../widgets/user_avatar.dart';
+import 'choose_avatar_screen.dart';
 import 'choose_username_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -108,6 +111,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           mutedColor: muted,
                           borderColor: border,
                           accentColor: accent,
+                        ),
+
+                        const SizedBox(height: 12),
+
+                        _buildAvatarTile(
+                          cardColor: card,
+                          textColor: text,
+                          mutedColor: muted,
+                          borderColor: border,
                         ),
 
                         const SizedBox(height: 32),
@@ -229,6 +241,62 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     _username,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: mutedColor, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, color: mutedColor),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAvatarTile({
+    required Color cardColor,
+    required Color textColor,
+    required Color mutedColor,
+    required Color borderColor,
+  }) {
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const ChooseAvatarScreen()),
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: cardColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: borderColor),
+        ),
+        child: Row(
+          children: [
+            ListenableBuilder(
+              listenable: CurrentUser(),
+              builder: (context, _) => UserAvatar(
+                username: _username,
+                colorKey: CurrentUser().avatarColor,
+                size: 40,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Avatar',
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    'Inicial do nome ou uma cor',
                     style: TextStyle(color: mutedColor, fontSize: 12),
                   ),
                 ],

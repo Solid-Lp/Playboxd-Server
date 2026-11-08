@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'user_avatar.dart';
+
 class ReviewCardLarge extends StatelessWidget {
 
   final String username;
@@ -14,6 +16,9 @@ class ReviewCardLarge extends StatelessWidget {
   // 'dropped'); null quando o jogo não está na biblioteca dele
   final String? libraryStatus;
 
+  // Cor do avatar de quem escreveu (null = inicial no estilo padrão)
+  final String? avatarColor;
+
   const ReviewCardLarge({
 
     super.key,
@@ -27,6 +32,8 @@ class ReviewCardLarge extends StatelessWidget {
     required this.rating,
 
     this.libraryStatus,
+
+    this.avatarColor,
   });
 
   static const _statusStyles = {
@@ -111,15 +118,9 @@ class ReviewCardLarge extends StatelessWidget {
 
             children: [
 
-              const CircleAvatar(
-
-                backgroundColor:
-                    Color(0xFF39FF14),
-
-                child: Icon(
-                  Icons.person,
-                  color: Colors.black,
-                ),
+              UserAvatar(
+                username: username,
+                colorKey: avatarColor,
               ),
 
               const SizedBox(width: 12),
