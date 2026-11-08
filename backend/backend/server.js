@@ -93,6 +93,25 @@ async function igdbQuery(body, retry = true) {
   }
 }
 
+// Tipos da IGDB que aparecem no app (sem DLC, bundle, mod, episódio, pack, update)
+const ALLOWED_GAME_TYPES = [0, 2, 4, 8, 9, 10, 11];
+const GAME_TYPE_FILTER = `game_type = (${ALLOWED_GAME_TYPES.join(',')})`;
+
+// Sem tipo, não encontrado ou IGDB fora do ar: deixa passar
+async function isAllowedGame(gameId) {
+  const id = parseInt(gameId, 10);
+  if (Number.isNaN(id)) return true;
+
+  try {
+    const data = await igdbQuery(`fields game_type; where id = ${id};`);
+    const type = data[0]?.game_type;
+    return type == null || ALLOWED_GAME_TYPES.includes(type);
+  } catch (err) {
+    console.log('Erro ao checar tipo do jogo:', err.response?.data || err.message);
+    return true;
+  }
+}
+
 
 // =========================
 // MIDDLEWARE AUTH
@@ -738,9 +757,10 @@ app.get('/popular-games', async (req, res) => {
   try {
 
     const data = await igdbQuery(`
-      fields name, cover.url, rating, summary, genres.name;
+      fields name, cover.url, rating, summary, genres.name,
+        platforms.abbreviation, platforms.name, platforms.platform_family;
       limit 20;
-      where cover != null & total_rating_count > 50;
+      where cover != null & total_rating_count > 50 & ${GAME_TYPE_FILTER};
       sort total_rating desc;
     `);
 
@@ -762,8 +782,9 @@ app.get('/new-releases', async (req, res) => {
   try {
 
     const data = await igdbQuery(`
-      fields name, cover.url, first_release_date, rating, summary, genres.name;
-      where cover != null & first_release_date != null;
+      fields name, cover.url, first_release_date, rating, summary, genres.name,
+        platforms.abbreviation, platforms.name, platforms.platform_family;
+      where cover != null & first_release_date != null & ${GAME_TYPE_FILTER};
       sort first_release_date desc;
       limit 20;
     `);
@@ -795,8 +816,9 @@ app.get('/search-games', async (req, res) => {
 
     const data = await igdbQuery(`
       search "${safeQuery}";
-      fields name, cover.url, rating, summary, genres.name;
-      where cover != null;
+      fields name, cover.url, rating, summary, genres.name,
+        platforms.abbreviation, platforms.name, platforms.platform_family;
+      where cover != null & ${GAME_TYPE_FILTER};
       limit 20;
     `);
 
@@ -824,7 +846,8 @@ app.get('/games/:id', async (req, res) => {
     }
 
     const data = await igdbQuery(`
-      fields name, cover.url, rating, summary, genres.name;
+      fields name, cover.url, rating, summary, genres.name,
+        platforms.abbreviation, platforms.name, platforms.platform_family;
       where id = ${id};
     `);
 
@@ -874,6 +897,13 @@ app.post('/library', authMiddleware, async (req, res) => {
   try {
 
     const { game_id, game_name, cover_url, status, progress } = req.body;
+
+    if (!(await isAllowedGame(game_id))) {
+      return res.status(400).json({
+        success: false,
+        message: 'Este item não é um jogo (DLC, pacote ou similar) e não pode ser adicionado à biblioteca.',
+      });
+    }
 
     const result = await pool.query(
       `INSERT INTO library (user_id, game_id, game_name, cover_url, status, progress)
@@ -987,6 +1017,13 @@ app.post('/reviews', authMiddleware, async (req, res) => {
   try {
 
     const { game_id, game_name, cover_url, rating, review_text } = req.body;
+
+    if (!(await isAllowedGame(game_id))) {
+      return res.status(400).json({
+        success: false,
+        message: 'Este item não é um jogo (DLC, pacote ou similar) e não pode receber review.',
+      });
+    }
 
     if (await isReviewBlocked(review_text)) {
       return res.status(400).json({

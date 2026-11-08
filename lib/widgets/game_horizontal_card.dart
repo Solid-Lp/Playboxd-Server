@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../screens/game_details_screen.dart';
 import '../../services/api_service.dart';
+import 'platform_tags.dart';
 
 class GameHorizontalCard extends StatefulWidget {
   final dynamic game;
@@ -201,6 +202,10 @@ class _GameHorizontalCardState extends State<GameHorizontalCard> {
                 fontWeight: FontWeight.bold,
               ),
             ),
+            if (widget.game['platforms'] != null) ...[
+              const SizedBox(height: 6),
+              PlatformTags(platforms: widget.game['platforms']),
+            ],
           ],
         ),
       ),

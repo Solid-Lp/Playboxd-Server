@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/app_settings.dart';
 import '../services/api_service.dart';
 import '../screens/write_review_screen.dart';
+import 'platform_tags.dart';
 
 class GameDetailsHeader extends StatefulWidget {
   final dynamic game;
@@ -295,17 +296,11 @@ class _GameDetailsHeaderState extends State<GameDetailsHeader> {
               crossAxisAlignment: CrossAxisAlignment.start,
 
               children: [
-                Row(
-                  children: [
-                    buildTag('ACTION RPG'),
+                if (game['platforms'] != null) ...[
+                  PlatformTags(platforms: game['platforms']),
 
-                    const SizedBox(width: 8),
-
-                    buildTag('OPEN WORLD'),
-                  ],
-                ),
-
-                const SizedBox(height: 16),
+                  const SizedBox(height: 16),
+                ],
 
                 Text(
                   game['name'] ?? '',
@@ -444,28 +439,6 @@ class _GameDetailsHeaderState extends State<GameDetailsHeader> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget buildTag(String text) {
-    final settings = AppSettings();
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: settings.bgColor.withOpacity(0.25),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          color: settings.accentColor,
-
-          fontWeight: FontWeight.bold,
-
-          fontSize: 12,
-        ),
       ),
     );
   }

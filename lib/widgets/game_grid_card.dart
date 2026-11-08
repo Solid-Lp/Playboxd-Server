@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../screens/game_details_screen.dart';
 import '../../services/api_service.dart';
+import 'platform_tags.dart';
 
 class GameGridCard extends StatefulWidget {
   final dynamic game;
@@ -217,6 +218,10 @@ class _GameGridCardState extends State<GameGridCard> {
                       color: Colors.white.withOpacity(0.7),
                     ),
                   ),
+                  if (widget.game['platforms'] != null) ...[
+                    const SizedBox(height: 8),
+                    PlatformTags(platforms: widget.game['platforms']),
+                  ],
                 ],
               ),
             ),
