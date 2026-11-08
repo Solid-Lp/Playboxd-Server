@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/api_service.dart';
 import '../services/google_auth_service.dart';
+import '../services/session_store.dart';
 import '../widgets/auth_input.dart';
 import 'app_shell.dart';
 import 'login_screen.dart';
@@ -61,7 +62,7 @@ class _ChooseUsernameScreenState extends State<ChooseUsernameScreen> {
 
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${prefs.getString('token')}',
+          'Authorization': 'Bearer ${await SessionStore.getToken()}',
         },
 
         body: jsonEncode({'username': username}),
@@ -112,6 +113,8 @@ class _ChooseUsernameScreenState extends State<ChooseUsernameScreen> {
     final prefs = await SharedPreferences.getInstance();
 
     await prefs.clear();
+
+    await SessionStore.clear();
 
     GoogleAuthService.signOut();
 

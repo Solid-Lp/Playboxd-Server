@@ -3,19 +3,26 @@ import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/api_service.dart';
 import '../services/app_settings.dart';
+import '../services/session_store.dart';
+
+// Mesmo limite do servidor
+const reviewMaxLength = 2000;
 
 class WriteReviewScreen extends StatefulWidget {
   final dynamic game;
   final String imageUrl;
 
+  // Review do usuário para este jogo: a tela abre em modo de edição
+  final Map<String, dynamic>? existingReview;
+
   const WriteReviewScreen({
     super.key,
     required this.game,
     required this.imageUrl,
+    this.existingReview,
   });
 
   @override
@@ -23,10 +30,15 @@ class WriteReviewScreen extends StatefulWidget {
 }
 
 class _WriteReviewScreenState extends State<WriteReviewScreen> {
-  final _controller = TextEditingController();
+  late final _controller = TextEditingController(
+    text: widget.existingReview?['review_text'] ?? '',
+  );
   final _settings = AppSettings();
-  double _rating = 0;
+  late double _rating =
+      (widget.existingReview?['rating'] as num?)?.toDouble() ?? 0;
   bool _loading = false;
+
+  bool get _editing => widget.existingReview != null;
 
   @override
   void dispose() {
@@ -58,45 +70,48 @@ class _WriteReviewScreenState extends State<WriteReviewScreen> {
     setState(() => _loading = true);
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token');
+      final token = await SessionStore.getToken();
 
-      final coverUrl = widget.game['cover'] != null
-          ? 'https:${widget.game['cover']['url']}'.replaceAll('t_thumb', 't_1080p')
-          : widget.imageUrl;
+      final headers = {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      };
 
-      final res = await http.post(
-        Uri.parse('${ApiService.baseUrl}/reviews'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'game_id': widget.game['id'].toString(),
-          'game_name': widget.game['name'],
-          'cover_url': coverUrl,
-          'rating': _rating,
-          'review_text': _controller.text.trim(),
-        }),
-      );
+      // Nome e capa do jogo o servidor busca na IGDB pelo game_id
+      final body = jsonEncode({
+        'game_id': widget.game['id'].toString(),
+        'rating': _rating.toInt(),
+        'review_text': _controller.text.trim(),
+      });
 
-      print('STATUS: ${res.statusCode}');
-      print('BODY: ${res.body}');
+      final res = _editing
+          ? await http.put(
+              Uri.parse('${ApiService.baseUrl}/reviews/${widget.game['id']}'),
+              headers: headers,
+              body: body,
+            )
+          : await http.post(
+              Uri.parse('${ApiService.baseUrl}/reviews'),
+              headers: headers,
+              body: body,
+            );
 
       final data = jsonDecode(res.body);
 
-      if (data['success']) {
+      if (data['success'] == true) {
         if (mounted) {
           Navigator.pop(context, true);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Review publicada!'),
-              backgroundColor: Color(0xFF39FF14),
+            SnackBar(
+              content: Text(_editing ? 'Review atualizada!' : 'Review publicada!'),
+              backgroundColor: const Color(0xFF39FF14),
             ),
           );
         }
       } else {
-        throw Exception(data['message'] ?? 'Erro ao publicar review');
+        throw Exception(
+          data['message'] ?? data['error'] ?? 'Erro ao publicar review',
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -202,7 +217,7 @@ class _WriteReviewScreenState extends State<WriteReviewScreen> {
             left: 20,
             bottom: 20,
             child: Text(
-              'Write a Review',
+              _editing ? 'Edit Review' : 'Write a Review',
               style: TextStyle(
                 color: _settings.textColor,
                 fontSize: 32,
@@ -337,6 +352,7 @@ class _WriteReviewScreenState extends State<WriteReviewScreen> {
           child: TextField(
             controller: _controller,
             maxLines: 6,
+            maxLength: reviewMaxLength,
             style: TextStyle(color: _settings.textColor, height: 1.6),
             decoration: InputDecoration(
               hintText: 'O que você achou desse jogo?',
@@ -370,9 +386,9 @@ class _WriteReviewScreenState extends State<WriteReviewScreen> {
                     strokeWidth: 2,
                   ),
                 )
-              : const Text(
-                  'PUBLISH REVIEW',
-                  style: TextStyle(
+              : Text(
+                  _editing ? 'SALVAR ALTERAÇÕES' : 'PUBLISH REVIEW',
+                  style: const TextStyle(
                     color: Colors.black,
                     fontWeight: FontWeight.bold,
                     fontSize: 15,

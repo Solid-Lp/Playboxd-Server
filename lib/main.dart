@@ -1,9 +1,14 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'screens/app_shell.dart';
 import 'screens/login_screen.dart';
+import 'services/api_service.dart';
 import 'services/app_settings.dart';
+import 'services/session_store.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,10 +21,46 @@ class MyApp extends StatelessWidget {
 
   final _settings = AppSettings();
 
+  // Uma vez só: mudar fonte/contraste reconstrói o app e não deve revalidar
+  late final Future<bool> _loginCheck = checkLogin();
+
+  // Valida o login ao abrir o app e troca o token por um novo de 7 dias
   Future<bool> checkLogin() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
-    return token != null;
+    await SessionStore.migrateFromPrefs();
+
+    final token = await SessionStore.getToken();
+    if (token == null) return false;
+
+    try {
+      final response = await http
+          .get(
+            Uri.parse('${ApiService.baseUrl}/me'),
+            headers: {'Authorization': 'Bearer $token'},
+          )
+          .timeout(const Duration(seconds: 60));
+
+      if (response.statusCode == 401) {
+        // Login vencido ou senha redefinida em outro aparelho
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('username');
+        await prefs.remove('email');
+        await SessionStore.clear();
+        return false;
+      }
+
+      final data = jsonDecode(response.body);
+      if (data['success'] == true) {
+        final prefs = await SharedPreferences.getInstance();
+        await SessionStore.setToken(data['token']);
+        await prefs.setString('username', data['user']['username']);
+        await prefs.setString('email', data['user']['email']);
+      }
+    } catch (e) {
+      // Sem internet ou servidor acordando: segue com o token atual
+      debugPrint('Erro ao validar login: $e');
+    }
+
+    return true;
   }
 
   @override
@@ -54,7 +95,7 @@ class MyApp extends StatelessWidget {
             useMaterial3: true,
           ),
           home: FutureBuilder<bool>(
-            future: checkLogin(),
+            future: _loginCheck,
             builder: (context, snapshot) {
               if (!snapshot.hasData) {
                 return const Scaffold(

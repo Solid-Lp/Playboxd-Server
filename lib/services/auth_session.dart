@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../screens/app_shell.dart';
 import '../screens/choose_username_screen.dart';
+import 'session_store.dart';
 
 // Salva a sessão devolvida pelo backend (/login, /auth/google, /verify-email)
 // e abre o app, removendo as telas de login/cadastro do histórico.
@@ -14,10 +15,7 @@ Future<void> startSession(
   final prefs =
       await SharedPreferences.getInstance();
 
-  await prefs.setString(
-    'token',
-    data['token'],
-  );
+  await SessionStore.setToken(data['token']);
 
   await prefs.setString(
     'username',

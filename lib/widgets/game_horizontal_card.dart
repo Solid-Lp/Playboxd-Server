@@ -3,10 +3,10 @@ import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../screens/game_details_screen.dart';
 import '../../services/api_service.dart';
+import '../../services/session_store.dart';
 import 'platform_tags.dart';
 
 class GameHorizontalCard extends StatefulWidget {
@@ -32,10 +32,7 @@ class _GameHorizontalCardState extends State<GameHorizontalCard> {
     _checkLibrary();
   }
 
-  Future<String?> _getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('token');
-  }
+  Future<String?> _getToken() => SessionStore.getToken();
 
   Future<void> _checkLibrary() async {
     try {

@@ -2,6 +2,7 @@
 -- Playboxd: estrutura do banco de dados (PostgreSQL / Neon)
 -- =============================================================
 -- Reflete o banco de produção em 2026-11-08.
+-- Tabelas *_old# são backups manuais e não fazem parte da estrutura.
 --
 -- Recriar o banco do zero:
 --   psql "$DATABASE_URL" -f schema.sql
@@ -26,8 +27,14 @@ CREATE TABLE IF NOT EXISTS users (
   -- Contas por e-mail só entram depois de confirmar o código
   email_verified  BOOLEAN NOT NULL DEFAULT false,
   -- false: conta criada pelo Google que ainda não escolheu o nome
-  username_set    BOOLEAN NOT NULL DEFAULT true
+  username_set    BOOLEAN NOT NULL DEFAULT true,
+  -- Vai no JWT; somar 1 derruba todas as sessões (ex.: ao redefinir a senha)
+  token_version   INTEGER NOT NULL DEFAULT 0
 );
+
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS username_set BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS token_version INTEGER NOT NULL DEFAULT 0;
 
 
 -- -------------------------------------------------------------
@@ -61,7 +68,10 @@ CREATE TABLE IF NOT EXISTS reviews (
   review       TEXT,  -- legado: substituída por review_text
   created_at   TIMESTAMP DEFAULT NOW(),
   cover_url    TEXT,
-  review_text  TEXT
+  review_text  TEXT,
+  -- Uma review por usuário em cada jogo, com nota de 1 a 5
+  CONSTRAINT reviews_user_game_unique UNIQUE (user_id, game_id),
+  CONSTRAINT reviews_rating_range CHECK (rating BETWEEN 1 AND 5)
 );
 
 CREATE INDEX IF NOT EXISTS idx_reviews_user_id ON reviews (user_id);

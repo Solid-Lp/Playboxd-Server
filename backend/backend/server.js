@@ -6,6 +6,7 @@ const jwt = require('jsonwebtoken');
 const axios = require('axios');
 const { OAuth2Client } = require('google-auth-library');
 const crypto = require('crypto');
+const { rateLimit } = require('express-rate-limit');
 const { usernameHasBlockedWord, isReviewBlocked } = require('./moderation');
 
 require('dotenv').config();
@@ -36,8 +37,39 @@ async function sendEmail({ to, toName, subject, text, html }) {
 
 const app = express();
 
+// O Render fica atrás de um proxy: sem isso, todo mundo teria o mesmo IP
+app.set('trust proxy', 1);
+
 app.use(cors());
 app.use(express.json());
+
+
+// =========================
+// LIMITE DE TENTATIVAS
+// =========================
+
+function limiter(windowMinutes, limit, keyGenerator) {
+  return rateLimit({
+    windowMs: windowMinutes * 60 * 1000,
+    limit,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    ...(keyGenerator && { keyGenerator }),
+    message: {
+      success: false,
+      message: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.',
+    },
+  });
+}
+
+// Por IP
+const authLimiter = limiter(15, 10);
+// Protege a cota de e-mails do Brevo
+const emailLimiter = limiter(60, 5);
+// Cada código já aceita só 5 tentativas; isto limita a troca de códigos
+const codeLimiter = limiter(15, 15);
+// Por usuário (usar depois do authMiddleware); protege a cota da OpenAI
+const writeLimiter = limiter(60, 20, (req) => `user:${req.userId}`);
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -97,19 +129,37 @@ async function igdbQuery(body, retry = true) {
 const ALLOWED_GAME_TYPES = [0, 2, 4, 8, 9, 10, 11];
 const GAME_TYPE_FILTER = `game_type = (${ALLOWED_GAME_TYPES.join(',')})`;
 
-// Sem tipo, não encontrado ou IGDB fora do ar: deixa passar
-async function isAllowedGame(gameId) {
-  const id = parseInt(gameId, 10);
-  if (Number.isNaN(id)) return true;
-
-  try {
-    const data = await igdbQuery(`fields game_type; where id = ${id};`);
-    const type = data[0]?.game_type;
-    return type == null || ALLOWED_GAME_TYPES.includes(type);
-  } catch (err) {
-    console.log('Erro ao checar tipo do jogo:', err.response?.data || err.message);
-    return true;
+// Busca nome e capa na IGDB, para não confiar nos dados enviados pelo app.
+// Retorna { game } ou { status, message } quando o jogo não pode ser usado.
+async function fetchGame(gameId) {
+  const id = Number(gameId);
+  if (!Number.isInteger(id) || id <= 0) {
+    return { status: 400, message: 'Jogo inválido' };
   }
+
+  let data;
+  try {
+    data = await igdbQuery(`fields name, cover.url, game_type; where id = ${id};`);
+  } catch (err) {
+    console.log('Erro ao buscar jogo na IGDB:', err.response?.data || err.message);
+    return { status: 503, message: 'Não foi possível verificar o jogo. Tente novamente.' };
+  }
+
+  const game = data[0];
+  if (!game) {
+    return { status: 400, message: 'Jogo não encontrado' };
+  }
+
+  if (game.game_type != null && !ALLOWED_GAME_TYPES.includes(game.game_type)) {
+    return { status: 400, message: 'Este item não é um jogo (DLC, pacote ou similar).' };
+  }
+
+  // Mesmo formato de capa que o app usa
+  const coverUrl = game.cover?.url
+    ? `https:${game.cover.url}`.replace('t_thumb', 't_1080p')
+    : null;
+
+  return { game: { id, name: game.name, cover_url: coverUrl } };
 }
 
 
@@ -117,7 +167,7 @@ async function isAllowedGame(gameId) {
 // MIDDLEWARE AUTH
 // =========================
 
-function authMiddleware(req, res, next) {
+async function authMiddleware(req, res, next) {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
@@ -128,16 +178,37 @@ function authMiddleware(req, res, next) {
     });
   }
 
+  let decoded;
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.userId = decoded.id;
-    next();
+    decoded = jwt.verify(token, process.env.JWT_SECRET);
   } catch (error) {
     return res.status(401).json({
       success: false,
       message: 'Token inválido',
     });
   }
+
+  try {
+    // token_version muda ao redefinir a senha, derrubando sessões antigas.
+    // Tokens antigos (sem tv) contam como versão 0.
+    const result = await pool.query(
+      'SELECT token_version FROM users WHERE id = $1',
+      [decoded.id]
+    );
+
+    if (result.rows.length === 0 || result.rows[0].token_version !== (decoded.tv ?? 0)) {
+      return res.status(401).json({
+        success: false,
+        message: 'Sessão expirada. Faça login novamente.',
+      });
+    }
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ success: false, message: 'Erro no servidor' });
+  }
+
+  req.userId = decoded.id;
+  next();
 }
 
 
@@ -163,8 +234,9 @@ const CODE_EMAILS = {
 
 function authResponse(user) {
   const token = jwt.sign(
-    { id: user.id },
-    process.env.JWT_SECRET
+    { id: user.id, tv: user.token_version ?? 0 },
+    process.env.JWT_SECRET,
+    { expiresIn: '7d' }
   );
 
   return {
@@ -347,7 +419,7 @@ app.get('/', async (req, res) => {
 // REGISTER
 // =========================
 
-app.post('/register', async (req, res) => {
+app.post('/register', authLimiter, async (req, res) => {
 
   try {
 
@@ -428,7 +500,7 @@ app.post('/register', async (req, res) => {
 // LOGIN
 // =========================
 
-app.post('/login', async (req, res) => {
+app.post('/login', authLimiter, async (req, res) => {
 
   try {
 
@@ -492,7 +564,7 @@ app.post('/login', async (req, res) => {
 // LOGIN COM GOOGLE
 // =========================
 
-app.post('/auth/google', async (req, res) => {
+app.post('/auth/google', authLimiter, async (req, res) => {
 
   try {
 
@@ -572,7 +644,7 @@ app.post('/auth/google', async (req, res) => {
 // TROCAR NOME DE USUÁRIO
 // =========================
 
-app.patch('/profile/username', authMiddleware, async (req, res) => {
+app.patch('/profile/username', authMiddleware, writeLimiter, async (req, res) => {
 
   try {
 
@@ -605,10 +677,31 @@ app.patch('/profile/username', authMiddleware, async (req, res) => {
 
 
 // =========================
+// SESSÃO ATUAL (o app chama ao abrir e recebe um token novo de 7 dias)
+// =========================
+
+app.get('/me', authMiddleware, async (req, res) => {
+
+  try {
+
+    const result = await pool.query('SELECT * FROM users WHERE id = $1', [req.userId]);
+
+    const user = result.rows[0];
+
+    res.json({ ...authResponse(user), needsUsername: !user.username_set });
+
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+
+// =========================
 // VERIFICAÇÃO DE E-MAIL
 // =========================
 
-app.post('/verify-email', async (req, res) => {
+app.post('/verify-email', codeLimiter, async (req, res) => {
 
   try {
 
@@ -650,7 +743,7 @@ app.post('/verify-email', async (req, res) => {
   }
 });
 
-app.post('/resend-code', async (req, res) => {
+app.post('/resend-code', emailLimiter, async (req, res) => {
 
   try {
 
@@ -687,7 +780,7 @@ app.post('/resend-code', async (req, res) => {
 // ESQUECI MINHA SENHA
 // =========================
 
-app.post('/forgot-password', async (req, res) => {
+app.post('/forgot-password', emailLimiter, async (req, res) => {
 
   try {
 
@@ -706,7 +799,7 @@ app.post('/forgot-password', async (req, res) => {
   }
 });
 
-app.post('/reset-password', async (req, res) => {
+app.post('/reset-password', codeLimiter, async (req, res) => {
 
   try {
 
@@ -733,9 +826,12 @@ app.post('/reset-password', async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    // Quem recebeu o código provou ser dono do e-mail
+    // Quem recebeu o código provou ser dono do e-mail.
+    // token_version + 1 derruba as sessões abertas com a senha antiga.
     await pool.query(
-      'UPDATE users SET password = $1, email_verified = true WHERE id = $2',
+      `UPDATE users
+       SET password = $1, email_verified = true, token_version = token_version + 1
+       WHERE id = $2`,
       [hashedPassword, user.id]
     );
 
@@ -892,17 +988,34 @@ app.get('/library', authMiddleware, async (req, res) => {
 // LIBRARY - ADD
 // =========================
 
+const LIBRARY_STATUSES = ['playing', 'completed', 'dropped'];
+
+// Campos ausentes (undefined) são aceitos; quem chama decide o padrão
+function validateLibraryInput(status, progress) {
+  if (status !== undefined && !LIBRARY_STATUSES.includes(status)) {
+    return 'Status inválido';
+  }
+  if (progress !== undefined && (!Number.isInteger(progress) || progress < 0 || progress > 100)) {
+    return 'Progresso deve ser um número de 0 a 100';
+  }
+  return null;
+}
+
 app.post('/library', authMiddleware, async (req, res) => {
 
   try {
 
-    const { game_id, game_name, cover_url, status, progress } = req.body;
+    const { game_id, status = 'playing', progress = 0 } = req.body;
 
-    if (!(await isAllowedGame(game_id))) {
-      return res.status(400).json({
-        success: false,
-        message: 'Este item não é um jogo (DLC, pacote ou similar) e não pode ser adicionado à biblioteca.',
-      });
+    const inputError = validateLibraryInput(status, progress);
+    if (inputError) {
+      return res.status(400).json({ success: false, message: inputError });
+    }
+
+    // Nome e capa vêm da IGDB, não do app
+    const { game, status: errorStatus, message } = await fetchGame(game_id);
+    if (!game) {
+      return res.status(errorStatus).json({ success: false, message });
     }
 
     const result = await pool.query(
@@ -911,7 +1024,7 @@ app.post('/library', authMiddleware, async (req, res) => {
        ON CONFLICT (user_id, game_id)
        DO UPDATE SET status = $5, progress = $6
        RETURNING *`,
-      [req.userId, game_id, game_name, cover_url, status || 'playing', progress || 0]
+      [req.userId, game.id, game.name, game.cover_url, status, progress]
     );
 
     res.json({ success: true, data: result.rows[0] });
@@ -933,6 +1046,11 @@ app.patch('/library/:game_id', authMiddleware, async (req, res) => {
 
     const { game_id } = req.params;
     const { status, progress } = req.body;
+
+    const inputError = validateLibraryInput(status ?? undefined, progress ?? undefined);
+    if (inputError) {
+      return res.status(400).json({ success: false, message: inputError });
+    }
 
     const result = await pool.query(
       `UPDATE library
@@ -1012,35 +1130,140 @@ app.get('/reviews/popular', async (req, res) => {
 // REVIEWS - CREATE
 // =========================
 
-app.post('/reviews', authMiddleware, async (req, res) => {
+const REVIEW_MAX_LENGTH = 2000;
+
+const REVIEW_BLOCKED_MESSAGE = 'Sua review contém linguagem ofensiva ou discriminatória. '
+  + 'Critique o jogo à vontade, mas sem ofender pessoas ou grupos.';
+
+// Retorna { rating, text } válidos ou { error }
+function validateReviewInput(rating, reviewText) {
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+    return { error: 'A nota deve ser de 1 a 5 estrelas' };
+  }
+
+  const text = String(reviewText ?? '').trim();
+  if (text.length > REVIEW_MAX_LENGTH) {
+    return { error: `A review pode ter no máximo ${REVIEW_MAX_LENGTH} caracteres` };
+  }
+
+  return { rating, text };
+}
+
+app.post('/reviews', authMiddleware, writeLimiter, async (req, res) => {
 
   try {
 
-    const { game_id, game_name, cover_url, rating, review_text } = req.body;
+    const { game_id } = req.body;
 
-    if (!(await isAllowedGame(game_id))) {
-      return res.status(400).json({
-        success: false,
-        message: 'Este item não é um jogo (DLC, pacote ou similar) e não pode receber review.',
-      });
+    const input = validateReviewInput(req.body.rating, req.body.review_text);
+    if (input.error) {
+      return res.status(400).json({ success: false, message: input.error });
     }
 
-    if (await isReviewBlocked(review_text)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Sua review contém linguagem ofensiva ou discriminatória. '
-          + 'Critique o jogo à vontade, mas sem ofender pessoas ou grupos.',
-      });
+    // Nome e capa vêm da IGDB, não do app
+    const { game, status, message } = await fetchGame(game_id);
+    if (!game) {
+      return res.status(status).json({ success: false, message });
+    }
+
+    const existing = await pool.query(
+      'SELECT 1 FROM reviews WHERE user_id = $1 AND game_id = $2',
+      [req.userId, game.id]
+    );
+    if (existing.rows.length > 0) {
+      return res.status(409).json({ success: false, message: 'Você já avaliou este jogo' });
+    }
+
+    if (await isReviewBlocked(input.text)) {
+      return res.status(400).json({ success: false, message: REVIEW_BLOCKED_MESSAGE });
     }
 
     const result = await pool.query(
       `INSERT INTO reviews (user_id, game_id, game_name, cover_url, rating, review_text)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [req.userId, game_id, game_name, cover_url, rating, review_text]
+      [req.userId, game.id, game.name, game.cover_url, input.rating, input.text]
     );
 
     res.json({ success: true, data: result.rows[0] });
+
+  } catch (error) {
+    // Duas reviews enviadas ao mesmo tempo: a restrição única do banco segura
+    if (error.code === '23505') {
+      return res.status(409).json({ success: false, message: 'Você já avaliou este jogo' });
+    }
+    console.log(error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+
+// =========================
+// REVIEWS - EDITAR / APAGAR (a review do próprio usuário)
+// =========================
+
+app.put('/reviews/:game_id', authMiddleware, writeLimiter, async (req, res) => {
+
+  try {
+
+    const input = validateReviewInput(req.body.rating, req.body.review_text);
+    if (input.error) {
+      return res.status(400).json({ success: false, message: input.error });
+    }
+
+    if (await isReviewBlocked(input.text)) {
+      return res.status(400).json({ success: false, message: REVIEW_BLOCKED_MESSAGE });
+    }
+
+    const result = await pool.query(
+      `UPDATE reviews SET rating = $1, review_text = $2
+       WHERE user_id = $3 AND game_id = $4
+       RETURNING *`,
+      [input.rating, input.text, req.userId, req.params.game_id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Review não encontrada' });
+    }
+
+    res.json({ success: true, data: result.rows[0] });
+
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.delete('/reviews/:game_id', authMiddleware, async (req, res) => {
+
+  try {
+
+    await pool.query(
+      'DELETE FROM reviews WHERE user_id = $1 AND game_id = $2',
+      [req.userId, req.params.game_id]
+    );
+
+    res.json({ success: true, message: 'Review apagada' });
+
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Review do usuário logado para um jogo (null se ainda não avaliou)
+app.get('/my-reviews/:game_id', authMiddleware, async (req, res) => {
+
+  try {
+
+    const result = await pool.query(
+      `SELECT id, game_id, rating, review_text, created_at
+       FROM reviews
+       WHERE user_id = $1 AND game_id = $2`,
+      [req.userId, req.params.game_id]
+    );
+
+    res.json({ success: true, data: result.rows[0] || null });
 
   } catch (error) {
     console.log(error);

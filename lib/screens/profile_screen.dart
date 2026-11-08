@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import '../services/app_settings.dart';
 import '../services/google_auth_service.dart';
+import '../services/session_store.dart';
 import 'my_reviews_screen.dart';
 import 'game_details_screen.dart';
 import 'login_screen.dart';
@@ -51,7 +52,7 @@ class ProfileScreenState extends State<ProfileScreen> {
 
     try {
       final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token');
+      final token = await SessionStore.getToken();
 
       final results = await Future.wait([
         http.get(
@@ -113,6 +114,7 @@ class ProfileScreenState extends State<ProfileScreen> {
   Future<void> _logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
+    await SessionStore.clear();
     // Permite escolher outra conta Google no próximo login (sem bloquear a saída)
     GoogleAuthService.signOut();
     if (mounted) {
@@ -151,8 +153,7 @@ class ProfileScreenState extends State<ProfileScreen> {
     if (confirmed != true) return;
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token');
+      final token = await SessionStore.getToken();
 
       final response = await http.delete(
         Uri.parse('${ApiService.baseUrl}/account'),

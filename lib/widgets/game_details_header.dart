@@ -3,10 +3,10 @@ import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/app_settings.dart';
 import '../services/api_service.dart';
+import '../services/session_store.dart';
 import '../screens/write_review_screen.dart';
 import 'platform_tags.dart';
 
@@ -33,17 +33,16 @@ class GameDetailsHeader extends StatefulWidget {
 
 class _GameDetailsHeaderState extends State<GameDetailsHeader> {
   bool _inLibrary = false;
+  Map<String, dynamic>? _myReview;
 
   @override
   void initState() {
     super.initState();
     _checkLibrary();
+    _loadMyReview();
   }
 
-  Future<String?> _getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('token');
-  }
+  Future<String?> _getToken() => SessionStore.getToken();
 
   Future<void> _checkLibrary() async {
     try {
@@ -113,8 +112,16 @@ class _GameDetailsHeaderState extends State<GameDetailsHeader> {
             duration: const Duration(seconds: 2),
           ),
         );
-      } else {
-        throw Exception(data['error'] ?? 'Não foi possível adicionar o jogo.');
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              data['message'] ??
+                  data['error'] ??
+                  'Não foi possível adicionar o jogo à biblioteca.',
+            ),
+          ),
+        );
       }
     } catch (error) {
       debugPrint('Erro ao adicionar à biblioteca: $error');
@@ -123,6 +130,91 @@ class _GameDetailsHeaderState extends State<GameDetailsHeader> {
           const SnackBar(
             content: Text('Não foi possível adicionar o jogo à biblioteca.'),
           ),
+        );
+      }
+    }
+  }
+
+  // Review do usuário para este jogo (null se ainda não avaliou)
+  Future<void> _loadMyReview() async {
+    try {
+      final token = await _getToken();
+      if (token == null) return;
+
+      final response = await http.get(
+        Uri.parse('${ApiService.baseUrl}/my-reviews/${widget.game['id']}'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      final data = jsonDecode(response.body);
+      if (data['success'] == true && mounted) {
+        setState(() => _myReview = data['data']);
+      }
+    } catch (error) {
+      debugPrint('Erro ao carregar sua review: $error');
+    }
+  }
+
+  void _openReviewEditor() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => WriteReviewScreen(
+          game: widget.game,
+          imageUrl: widget.imageUrl,
+          existingReview: _myReview,
+        ),
+      ),
+    ).then((submitted) {
+      if (submitted == true) {
+        _loadMyReview();
+        widget.onReviewSubmitted?.call();
+      }
+    });
+  }
+
+  Future<void> _deleteMyReview() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Apagar review'),
+        content: const Text('Apagar sua review deste jogo?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text(
+              'Apagar',
+              style: TextStyle(color: Colors.redAccent),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      final token = await _getToken();
+      final response = await http.delete(
+        Uri.parse('${ApiService.baseUrl}/reviews/${widget.game['id']}'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      final data = jsonDecode(response.body);
+      if (data['success'] == true && mounted) {
+        setState(() => _myReview = null);
+        widget.onReviewSubmitted?.call();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Review apagada')),
+        );
+      }
+    } catch (error) {
+      debugPrint('Erro ao apagar review: $error');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Não foi possível apagar a review.')),
         );
       }
     }
@@ -382,23 +474,9 @@ class _GameDetailsHeaderState extends State<GameDetailsHeader> {
 
                     const SizedBox(width: 12),
 
+                    // Já avaliou: o botão vira EDITAR e aparece a lixeira
                     GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder:
-                                (_) => WriteReviewScreen(
-                                  game: game,
-                                  imageUrl: imageUrl,
-                                ),
-                          ),
-                        ).then((submitted) {
-                          if (submitted == true) {
-                            widget.onReviewSubmitted?.call();
-                          }
-                        });
-                      },
+                      onTap: _openReviewEditor,
 
                       child: Container(
                         height: 56,
@@ -422,7 +500,7 @@ class _GameDetailsHeaderState extends State<GameDetailsHeader> {
                             SizedBox(width: 8),
 
                             Text(
-                              'REVIEW',
+                              _myReview != null ? 'EDITAR' : 'REVIEW',
                               style: TextStyle(
                                 color: settings.textColor,
 
@@ -433,6 +511,32 @@ class _GameDetailsHeaderState extends State<GameDetailsHeader> {
                         ),
                       ),
                     ),
+
+                    if (_myReview != null) ...[
+                      const SizedBox(width: 12),
+
+                      GestureDetector(
+                        onTap: _deleteMyReview,
+
+                        child: Container(
+                          width: 56,
+                          height: 56,
+
+                          decoration: BoxDecoration(
+                            color: Colors.redAccent.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: Colors.redAccent.withValues(alpha: 0.4),
+                            ),
+                          ),
+
+                          child: const Icon(
+                            Icons.delete_outline,
+                            color: Colors.redAccent,
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ],
