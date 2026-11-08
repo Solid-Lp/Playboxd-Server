@@ -5,10 +5,21 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const axios = require('axios');
 const { OAuth2Client } = require('google-auth-library');
+const nodemailer = require('nodemailer');
+const crypto = require('crypto');
 
 require('dotenv').config();
 
 const googleClient = new OAuth2Client();
+
+const mailer = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER,
+    // Senha de app do Google costuma ser copiada com espaços
+    pass: (process.env.EMAIL_APP_PASSWORD || '').replace(/\s/g, ''),
+  },
+});
 
 const app = express();
 
@@ -99,6 +110,139 @@ function authMiddleware(req, res, next) {
 
 
 // =========================
+// CÓDIGOS POR E-MAIL (verificação e recuperação de senha)
+// =========================
+
+const CODE_TTL_MINUTES = 15;
+const CODE_MAX_ATTEMPTS = 5;
+const CODE_RESEND_SECONDS = 60;
+const MIN_PASSWORD_LENGTH = 6;
+
+const CODE_EMAILS = {
+  verify: {
+    subject: 'Seu código de verificação do Playboxd',
+    intro: 'Use o código abaixo para confirmar seu e-mail no Playboxd:',
+  },
+  reset: {
+    subject: 'Recuperação de senha do Playboxd',
+    intro: 'Recebemos um pedido para redefinir a senha da sua conta. Use o código abaixo no app:',
+  },
+};
+
+function authResponse(user) {
+  const token = jwt.sign(
+    { id: user.id },
+    process.env.JWT_SECRET
+  );
+
+  return {
+    success: true,
+    token,
+    user: {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      avatar_url: user.avatar_url,
+    },
+  };
+}
+
+// Gera um novo código, invalida os anteriores e envia por e-mail.
+// Retorna false se um código foi enviado há menos de CODE_RESEND_SECONDS.
+async function sendEmailCode(user, purpose) {
+
+  const recent = await pool.query(
+    `SELECT 1 FROM email_codes
+     WHERE user_id = $1 AND purpose = $2
+       AND created_at > NOW() - make_interval(secs => $3)`,
+    [user.id, purpose, CODE_RESEND_SECONDS]
+  );
+
+  if (recent.rows.length > 0) return false;
+
+  const code = crypto.randomInt(0, 1000000).toString().padStart(6, '0');
+  const codeHash = await bcrypt.hash(code, 10);
+
+  await pool.query(
+    'DELETE FROM email_codes WHERE user_id = $1 AND purpose = $2',
+    [user.id, purpose]
+  );
+
+  await pool.query(
+    `INSERT INTO email_codes (user_id, purpose, code_hash, expires_at)
+     VALUES ($1, $2, $3, NOW() + make_interval(mins => $4))`,
+    [user.id, purpose, codeHash, CODE_TTL_MINUTES]
+  );
+
+  const { subject, intro } = CODE_EMAILS[purpose];
+
+  await mailer.sendMail({
+    from: `"Playboxd" <${process.env.EMAIL_USER}>`,
+    to: user.email,
+    subject,
+    text: `Olá, ${user.username}!\n\n${intro}\n\n${code}\n\nO código expira em ${CODE_TTL_MINUTES} minutos. Se você não fez esse pedido, ignore este e-mail.`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px; background: #020817; color: #e6e6e6; border-radius: 16px;">
+        <h1 style="color: #39ff14; margin: 0 0 16px;">PLAYBOXD</h1>
+        <p>Olá, ${user.username}!</p>
+        <p>${intro}</p>
+        <p style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #39ff14; text-align: center; margin: 24px 0;">${code}</p>
+        <p style="color: #9aa4b2; font-size: 13px;">O código expira em ${CODE_TTL_MINUTES} minutos. Se você não fez esse pedido, ignore este e-mail.</p>
+      </div>`,
+  });
+
+  return true;
+}
+
+// Confere o código; em caso de erro devolve a mensagem para o usuário
+async function checkEmailCode(userId, purpose, code) {
+
+  const result = await pool.query(
+    `SELECT * FROM email_codes
+     WHERE user_id = $1 AND purpose = $2
+     ORDER BY created_at DESC
+     LIMIT 1`,
+    [userId, purpose]
+  );
+
+  const entry = result.rows[0];
+
+  if (!entry || new Date(entry.expires_at) < new Date()) {
+    return 'Código expirado. Peça um novo código.';
+  }
+
+  if (entry.attempts >= CODE_MAX_ATTEMPTS) {
+    return 'Muitas tentativas. Peça um novo código.';
+  }
+
+  const valid = await bcrypt.compare(String(code || '').trim(), entry.code_hash);
+
+  if (!valid) {
+    await pool.query(
+      'UPDATE email_codes SET attempts = attempts + 1 WHERE id = $1',
+      [entry.id]
+    );
+    return 'Código incorreto';
+  }
+
+  await pool.query(
+    'DELETE FROM email_codes WHERE user_id = $1 AND purpose = $2',
+    [userId, purpose]
+  );
+
+  return null;
+}
+
+async function findUserByEmail(email) {
+  const result = await pool.query(
+    'SELECT * FROM users WHERE LOWER(email) = $1',
+    [String(email || '').trim().toLowerCase()]
+  );
+  return result.rows[0];
+}
+
+
+// =========================
 // TESTE API
 // =========================
 
@@ -134,24 +278,38 @@ app.post('/register', async (req, res) => {
       });
     }
 
+    if (!password || password.length < MIN_PASSWORD_LENGTH) {
+      return res.status(400).json({
+        success: false,
+        message: `A senha deve ter pelo menos ${MIN_PASSWORD_LENGTH} caracteres`,
+      });
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const newUser = await pool.query(
-      `INSERT INTO users (username, email, password)
-       VALUES ($1, $2, $3)
-       RETURNING id, username, email`,
+      `INSERT INTO users (username, email, password, email_verified)
+       VALUES ($1, $2, $3, false)
+       RETURNING *`,
       [username, normalizedEmail, hashedPassword]
     );
 
-    const token = jwt.sign(
-      { id: newUser.rows[0].id },
-      process.env.JWT_SECRET
-    );
+    let emailSent = true;
+
+    try {
+      await sendEmailCode(newUser.rows[0], 'verify');
+    } catch (err) {
+      console.log('Erro ao enviar código de verificação:', err.message);
+      emailSent = false;
+    }
 
     res.json({
       success: true,
-      token,
-      user: newUser.rows[0],
+      needsVerification: true,
+      email: normalizedEmail,
+      message: emailSent
+        ? 'Enviamos um código para o seu e-mail'
+        : 'Conta criada, mas não foi possível enviar o código. Toque em "Reenviar código".',
     });
 
   } catch (error) {
@@ -201,21 +359,22 @@ app.post('/login', async (req, res) => {
       });
     }
 
-    const token = jwt.sign(
-      { id: user.id },
-      process.env.JWT_SECRET
-    );
+    if (!user.email_verified) {
+      try {
+        await sendEmailCode(user, 'verify');
+      } catch (err) {
+        console.log('Erro ao enviar código de verificação:', err.message);
+      }
 
-    res.json({
-      success: true,
-      token,
-      user: {
-        id: user.id,
-        username: user.username,
+      return res.status(403).json({
+        success: false,
+        needsVerification: true,
         email: user.email,
-        avatar_url: user.avatar_url,
-      },
-    });
+        message: 'Confirme seu e-mail para entrar. Enviamos um código para você.',
+      });
+    }
+
+    res.json(authResponse(user));
 
   } catch (error) {
     console.log(error);
@@ -267,7 +426,7 @@ app.post('/auth/google', async (req, res) => {
     // Mesmo e-mail de uma conta com senha: vincula ao Google
     if (userQuery.rows.length === 0) {
       userQuery = await pool.query(
-        `UPDATE users SET google_id = $1
+        `UPDATE users SET google_id = $1, email_verified = true
          WHERE LOWER(email) = $2
          RETURNING *`,
         [googleId, email]
@@ -278,8 +437,8 @@ app.post('/auth/google', async (req, res) => {
       const username = payload.name || email.split('@')[0];
 
       userQuery = await pool.query(
-        `INSERT INTO users (username, email, password, google_id, avatar_url)
-         VALUES ($1, $2, NULL, $3, $4)
+        `INSERT INTO users (username, email, password, google_id, avatar_url, email_verified)
+         VALUES ($1, $2, NULL, $3, $4, true)
          RETURNING *`,
         [username, email, googleId, payload.picture || null]
       );
@@ -302,6 +461,150 @@ app.post('/auth/google', async (req, res) => {
         avatar_url: user.avatar_url,
       },
     });
+
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+
+// =========================
+// VERIFICAÇÃO DE E-MAIL
+// =========================
+
+app.post('/verify-email', async (req, res) => {
+
+  try {
+
+    const { email, code } = req.body;
+
+    const user = await findUserByEmail(email);
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: 'Usuário não encontrado',
+      });
+    }
+
+    // Sem isso, qualquer um com o e-mail de uma conta verificada receberia um token
+    if (user.email_verified) {
+      return res.status(400).json({
+        success: false,
+        message: 'Este e-mail já foi verificado. Faça login.',
+      });
+    }
+
+    const error = await checkEmailCode(user.id, 'verify', code);
+
+    if (error) {
+      return res.status(400).json({ success: false, message: error });
+    }
+
+    await pool.query(
+      'UPDATE users SET email_verified = true WHERE id = $1',
+      [user.id]
+    );
+
+    res.json(authResponse(user));
+
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/resend-code', async (req, res) => {
+
+  try {
+
+    const { email, purpose } = req.body;
+
+    if (!CODE_EMAILS[purpose]) {
+      return res.status(400).json({ success: false, message: 'Pedido inválido' });
+    }
+
+    const user = await findUserByEmail(email);
+
+    // Resposta igual mesmo sem conta, para não revelar e-mails cadastrados
+    if (user && !(purpose === 'verify' && user.email_verified)) {
+      const sent = await sendEmailCode(user, purpose);
+
+      if (!sent) {
+        return res.status(429).json({
+          success: false,
+          message: `Aguarde ${CODE_RESEND_SECONDS} segundos para pedir outro código`,
+        });
+      }
+    }
+
+    res.json({ success: true, message: 'Se o e-mail estiver cadastrado, enviamos um novo código' });
+
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ success: false, message: 'Não foi possível enviar o e-mail. Tente novamente.' });
+  }
+});
+
+
+// =========================
+// ESQUECI MINHA SENHA
+// =========================
+
+app.post('/forgot-password', async (req, res) => {
+
+  try {
+
+    const user = await findUserByEmail(req.body.email);
+
+    // Resposta igual mesmo sem conta, para não revelar e-mails cadastrados
+    if (user) {
+      await sendEmailCode(user, 'reset');
+    }
+
+    res.json({ success: true, message: 'Se o e-mail estiver cadastrado, enviamos um código' });
+
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ success: false, message: 'Não foi possível enviar o e-mail. Tente novamente.' });
+  }
+});
+
+app.post('/reset-password', async (req, res) => {
+
+  try {
+
+    const { email, code, newPassword } = req.body;
+
+    if (!newPassword || newPassword.length < MIN_PASSWORD_LENGTH) {
+      return res.status(400).json({
+        success: false,
+        message: `A senha deve ter pelo menos ${MIN_PASSWORD_LENGTH} caracteres`,
+      });
+    }
+
+    const user = await findUserByEmail(email);
+
+    if (!user) {
+      return res.status(400).json({ success: false, message: 'Código incorreto' });
+    }
+
+    const error = await checkEmailCode(user.id, 'reset', code);
+
+    if (error) {
+      return res.status(400).json({ success: false, message: error });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Quem recebeu o código provou ser dono do e-mail
+    await pool.query(
+      'UPDATE users SET password = $1, email_verified = true WHERE id = $2',
+      [hashedPassword, user.id]
+    );
+
+    res.json({ success: true, message: 'Senha alterada! Faça login com a nova senha.' });
 
   } catch (error) {
     console.log(error);
@@ -748,7 +1051,7 @@ app.get('/privacy', (req, res) => {
 </ul>
 
 <h2>Uso dos dados</h2>
-<p>Os dados são usados somente para o funcionamento do app: login, biblioteca, reviews e estatísticas do perfil. O nome de usuário aparece junto às suas reviews, que são públicas para outros usuários.</p>
+<p>Os dados são usados somente para o funcionamento do app: login, biblioteca, reviews e estatísticas do perfil. O e-mail também é usado para enviar códigos de verificação e de recuperação de senha. O nome de usuário aparece junto às suas reviews, que são públicas para outros usuários.</p>
 
 <h2>Compartilhamento</h2>
 <p>Não vendemos nem compartilhamos seus dados com terceiros. As informações dos jogos (capas, notas, descrições) vêm da IGDB e nenhuma informação pessoal é enviada a ela.</p>

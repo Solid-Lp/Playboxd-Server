@@ -3,12 +3,13 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 
-import 'app_shell.dart';
 import '../services/api_service.dart';
+import '../services/auth_session.dart';
 import '../services/google_auth_service.dart';
+import 'forgot_password_screen.dart';
 import 'signup_screen.dart';
+import 'verify_email_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -75,7 +76,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (data['success']) {
 
-        await handleAuthSuccess(data);
+        if (mounted) await startSession(context, data);
 
       } else {
 
@@ -87,6 +88,21 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
         );
+
+        // Conta ainda não confirmada: o backend já enviou um código
+        if (data['needsVerification'] == true && mounted) {
+
+          Navigator.push(
+
+            context,
+
+            MaterialPageRoute(
+              builder: (_) => VerifyEmailScreen(
+                email: data['email'] ?? email,
+              ),
+            ),
+          );
+        }
       }
 
     } catch (e) {
@@ -106,48 +122,6 @@ class _LoginScreenState extends State<LoginScreen> {
         loading = false;
       });
     }
-  }
-
-  Future<void> handleAuthSuccess(Map<String, dynamic> data) async {
-
-    final prefs =
-        await SharedPreferences.getInstance();
-
-    await prefs.setString(
-      'token',
-      data['token'],
-    );
-
-    await prefs.setString(
-      'username',
-      data['user']['username'],
-    );
-
-    await prefs.setString(
-      'email',
-      data['user']['email'],
-    );
-
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Login realizado com sucesso!',
-        ),
-      ),
-    );
-
-    Navigator.pushAndRemoveUntil(
-
-      context,
-
-      MaterialPageRoute(
-        builder: (_) => const AppShell(),
-      ),
-
-      (_) => false,
-    );
   }
 
   Future<void> loginWithGoogle() async {
@@ -188,7 +162,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (data['success']) {
 
-        await handleAuthSuccess(data);
+        if (mounted) await startSession(context, data);
 
       } else if (mounted) {
 
@@ -565,6 +539,48 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                     ],
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                Center(
+
+                  child: GestureDetector(
+
+                    onTap: () {
+
+                      Navigator.push(
+
+                        context,
+
+                        MaterialPageRoute(
+
+                          builder: (_) =>
+                              const ForgotPasswordScreen(),
+                        ),
+                      );
+                    },
+
+                    child: Text(
+
+                      'ESQUECI MINHA SENHA',
+
+                      style: TextStyle(
+
+                        color:
+                            Colors.white.withValues(alpha: 0.7),
+
+                        fontWeight:
+                            FontWeight.bold,
+
+                        decoration:
+                            TextDecoration.underline,
+
+                        decorationColor:
+                            Colors.white.withValues(alpha: 0.7),
+                      ),
+                    ),
                   ),
                 ),
               ],

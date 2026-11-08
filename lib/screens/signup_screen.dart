@@ -10,6 +10,7 @@ import 'package:http/http.dart' as http;
 
 import '../services/api_service.dart';
 import 'login_screen.dart';
+import 'verify_email_screen.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -57,6 +58,16 @@ class _SignupScreenState extends State<SignupScreen> {
       return;
     }
 
+    if (password.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('A senha deve ter pelo menos 6 caracteres'),
+        ),
+      );
+
+      return;
+    }
+
     try {
       setState(() {
         loading = true;
@@ -78,12 +89,16 @@ class _SignupScreenState extends State<SignupScreen> {
 
       if (data['success']) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Conta criada com sucesso!')),
+          SnackBar(
+            content: Text(data['message'] ?? 'Conta criada com sucesso!'),
+          ),
         );
 
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const LoginScreen()),
+          MaterialPageRoute(
+            builder: (_) => VerifyEmailScreen(email: data['email'] ?? email),
+          ),
         );
       } else {
         ScaffoldMessenger.of(

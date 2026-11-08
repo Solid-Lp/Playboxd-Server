@@ -18,3 +18,7 @@ services:
         sync: false
       - key: GOOGLE_CLIENT_ID
         sync: false
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_APP_PASSWORD
+        sync: false
