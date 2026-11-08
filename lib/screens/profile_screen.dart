@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import '../services/app_settings.dart';
 import '../services/google_auth_service.dart';
+import 'my_reviews_screen.dart';
 import 'game_details_screen.dart';
 import 'login_screen.dart';
 import 'settings_screen.dart';
@@ -25,6 +26,7 @@ class ProfileScreenState extends State<ProfileScreen> {
 
   List<Map<String, dynamic>> _library = [];
   List<Map<String, dynamic>> _activities = [];
+  List<Map<String, dynamic>> _myReviews = [];
 
   int _gamesPlayed = 0;
   int _reviewsWritten = 0;
@@ -60,11 +62,16 @@ class ProfileScreenState extends State<ProfileScreen> {
           Uri.parse('${ApiService.baseUrl}/profile/stats'),
           headers: {'Authorization': 'Bearer $token'},
         ),
+        http.get(
+          Uri.parse('${ApiService.baseUrl}/my-reviews'),
+          headers: {'Authorization': 'Bearer $token'},
+        ),
       ]);
 
       final libraryData = jsonDecode(results[0].body);
       final activityData = jsonDecode(results[1].body);
       final statsData = jsonDecode(results[2].body);
+      final myReviewsData = jsonDecode(results[3].body);
 
       setState(() {
         _username = prefs.getString('username') ?? 'Player';
@@ -78,6 +85,11 @@ class ProfileScreenState extends State<ProfileScreen> {
         _activities =
             activityData['success']
                 ? List<Map<String, dynamic>>.from(activityData['data'])
+                : [];
+
+        _myReviews =
+            myReviewsData['success'] == true
+                ? List<Map<String, dynamic>>.from(myReviewsData['data'])
                 : [];
 
         if (statsData['success']) {
@@ -209,6 +221,8 @@ class ProfileScreenState extends State<ProfileScreen> {
                     _buildStats(text),
                     const SizedBox(height: 32),
                     _buildFavoriteGames(text, accent),
+                    const SizedBox(height: 32),
+                    _buildMyReviews(text, accent),
                     const SizedBox(height: 32),
                     _buildActivity(text, accent),
                     const SizedBox(height: 32),
@@ -574,6 +588,73 @@ class ProfileScreenState extends State<ProfileScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  static const _profileReviewsLimit = 5;
+
+  Widget _buildMyReviews(Color text, Color accent) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'My Reviews',
+                style: TextStyle(
+                  color: text,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              if (_myReviews.length > _profileReviewsLimit)
+                GestureDetector(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => MyReviewsScreen(reviews: _myReviews),
+                    ),
+                  ),
+                  child: Text(
+                    'View All (${_myReviews.length})',
+                    style: TextStyle(
+                      color: accent,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        if (_myReviews.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: _settings.cardColor,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Text(
+                'Você ainda não escreveu nenhuma review.',
+                style: TextStyle(
+                  color: text.withValues(alpha: 0.35),
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          )
+        else
+          ..._myReviews
+              .take(_profileReviewsLimit)
+              .map((r) => buildMyReviewCard(context, r, _settings)),
+      ],
     );
   }
 

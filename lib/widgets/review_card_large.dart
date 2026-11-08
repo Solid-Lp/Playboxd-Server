@@ -10,6 +10,10 @@ class ReviewCardLarge extends StatelessWidget {
 
   final double rating;
 
+  // Status do jogo na biblioteca de quem escreveu ('playing', 'completed',
+  // 'dropped'); null quando o jogo não está na biblioteca dele
+  final String? libraryStatus;
+
   const ReviewCardLarge({
 
     super.key,
@@ -21,7 +25,56 @@ class ReviewCardLarge extends StatelessWidget {
     required this.date,
 
     required this.rating,
+
+    this.libraryStatus,
   });
+
+  static const _statusStyles = {
+    'playing': (Icons.sports_esports_outlined, 'Playing', Color(0xFF39FF14)),
+    'completed': (Icons.check_circle_outline, 'Completed', Color(0xFF4FC3F7)),
+    'dropped': (Icons.cancel_outlined, 'Dropped', Color(0xFFFF4A4A)),
+  };
+
+  Widget _buildStatusChip() {
+    final style = _statusStyles[libraryStatus];
+    if (style == null) return const SizedBox.shrink();
+
+    final (icon, label, color) = style;
+
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+
+        borderRadius: BorderRadius.circular(20),
+
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+
+        children: [
+          Icon(icon, color: color, size: 14),
+
+          const SizedBox(width: 6),
+
+          Text(
+            label,
+
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -113,6 +166,8 @@ class ReviewCardLarge extends StatelessWidget {
                         );
                       }),
                     ),
+
+                    _buildStatusChip(),
                   ],
                 ),
               ),

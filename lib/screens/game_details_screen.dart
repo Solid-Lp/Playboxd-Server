@@ -341,6 +341,7 @@ class _GameDetailsScreenState extends State<GameDetailsScreen> {
           review: r['review_text'] ?? '',
           date: _timeAgo(r['created_at']?.toString()),
           rating: double.tryParse(r['rating'].toString()) ?? 0,
+          libraryStatus: r['library_status']?.toString(),
         );
       }).toList(),
     );

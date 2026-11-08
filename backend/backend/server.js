@@ -954,6 +954,31 @@ app.post('/reviews', authMiddleware, async (req, res) => {
 
 
 // =========================
+// MY REVIEWS (do usuário logado, para o perfil)
+// =========================
+
+app.get('/my-reviews', authMiddleware, async (req, res) => {
+
+  try {
+
+    const result = await pool.query(
+      `SELECT id, game_id, game_name, cover_url, rating, review_text, created_at
+       FROM reviews
+       WHERE user_id = $1
+       ORDER BY created_at DESC`,
+      [req.userId]
+    );
+
+    res.json({ success: true, data: result.rows });
+
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+
+// =========================
 // ACTIVITY FEED (do usuário logado)
 // =========================
 
@@ -1031,9 +1056,11 @@ app.get('/reviews/:game_id', async (req, res) => {
     const { game_id } = req.params;
 
     const result = await pool.query(
-      `SELECT r.id, r.game_id, r.game_name, r.cover_url, r.rating, r.review_text, r.created_at, u.username
+      `SELECT r.id, r.game_id, r.game_name, r.cover_url, r.rating, r.review_text, r.created_at, u.username,
+              l.status AS library_status
        FROM reviews r
        JOIN users u ON u.id = r.user_id
+       LEFT JOIN library l ON l.user_id = r.user_id AND l.game_id = r.game_id
        WHERE r.game_id = $1
        ORDER BY r.created_at DESC
        LIMIT 10`,
