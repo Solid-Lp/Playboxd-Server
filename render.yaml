@@ -24,3 +24,11 @@ services:
         sync: false
       - key: OPENAI_API_KEY
         sync: false
+
+  # Site de apresentação (página estática, não dorme no plano gratuito)
+  - type: web
+    name: playboxd
+    runtime: static
+    rootDir: site
+    buildCommand: echo "Sem etapa de build"
+    staticPublishPath: .
