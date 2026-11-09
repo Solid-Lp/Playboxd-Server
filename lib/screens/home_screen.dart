@@ -8,10 +8,12 @@ import '../widgets/cover_image.dart';
 import '../services/api_service.dart';
 import '../services/app_settings.dart';
 import '../services/current_user.dart';
+import '../services/review_events.dart';
 import '../widgets/user_avatar.dart';
 
 import '../widgets/game_grid_card.dart';
 import '../widgets/game_horizontal_card.dart';
+import '../widgets/refresh_error.dart';
 import '../widgets/review_card.dart';
 import '../widgets/section_title.dart';
 
@@ -41,9 +43,20 @@ class _MainScreenState extends State<MainScreen> {
   void initState() {
     super.initState();
     fetchData();
+    // Review nova/editada/apagada: atualiza Top Rated e Popular Reviews em segundo plano
+    ReviewEvents().addListener(_onReviewsChanged);
   }
 
-  Future<void> fetchData() async {
+  @override
+  void dispose() {
+    ReviewEvents().removeListener(_onReviewsChanged);
+    super.dispose();
+  }
+
+  void _onReviewsChanged() => fetchData();
+
+  // Também usado pelo "puxar para atualizar": se algo falhar, mantém o que já estava na tela
+  Future<void> fetchData({bool showErrors = false}) async {
     try {
       final responses = await Future.wait([
         http.get(Uri.parse('${ApiService.baseUrl}/popular-games')),
@@ -64,18 +77,19 @@ class _MainScreenState extends State<MainScreen> {
         debugPrint('Erro em /new-releases: ${releasesData['error']}');
       }
 
+      if (!mounted) return;
       setState(() {
-        popularGames =
-            popularData['success'] == true ? (popularData['data'] ?? []) : [];
-        newReleases =
-            releasesData['success'] == true ? (releasesData['data'] ?? []) : [];
-        popularReviews = reviewsData['success'] ? reviewsData['data'] : [];
-        topRated = topRatedData['success'] ? topRatedData['data'] : [];
+        if (popularData['success'] == true) popularGames = popularData['data'] ?? [];
+        if (releasesData['success'] == true) newReleases = releasesData['data'] ?? [];
+        if (reviewsData['success'] == true) popularReviews = reviewsData['data'] ?? [];
+        if (topRatedData['success'] == true) topRated = topRatedData['data'] ?? [];
         loading = false;
       });
     } catch (e) {
       debugPrint('Erro ao buscar dados da Home: $e');
+      if (!mounted) return;
       setState(() => loading = false);
+      if (showErrors) showRefreshError(context);
     }
   }
 
@@ -108,7 +122,13 @@ class _MainScreenState extends State<MainScreen> {
         return loading
             ? Center(child: CircularProgressIndicator(color: accent))
             : SafeArea(
-              child: SingleChildScrollView(
+              child: RefreshIndicator(
+                color: accent,
+                backgroundColor: card,
+                onRefresh: () => fetchData(showErrors: true),
+                child: SingleChildScrollView(
+                // Permite puxar mesmo quando o conteúdo cabe na tela
+                physics: const AlwaysScrollableScrollPhysics(),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -139,6 +159,7 @@ class _MainScreenState extends State<MainScreen> {
                     const SizedBox(height: 40),
                   ],
                 ),
+                ),
               ),
             );
       },
@@ -152,7 +173,7 @@ class _MainScreenState extends State<MainScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            'PLAYBOXED',
+            'PLAYBOXD',
             style: TextStyle(
               color: accent,
               fontSize: 30,

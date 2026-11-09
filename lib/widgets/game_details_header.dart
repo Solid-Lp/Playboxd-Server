@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'cover_image.dart';
 import '../services/app_settings.dart';
 import '../services/api_service.dart';
+import '../services/review_events.dart';
 import '../services/session_store.dart';
 import '../screens/write_review_screen.dart';
 import 'platform_tags.dart';
@@ -28,10 +29,10 @@ class GameDetailsHeader extends StatefulWidget {
   });
 
   @override
-  State<GameDetailsHeader> createState() => _GameDetailsHeaderState();
+  State<GameDetailsHeader> createState() => GameDetailsHeaderState();
 }
 
-class _GameDetailsHeaderState extends State<GameDetailsHeader> {
+class GameDetailsHeaderState extends State<GameDetailsHeader> {
   bool _inLibrary = false;
   Map<String, dynamic>? _myReview;
 
@@ -43,6 +44,9 @@ class _GameDetailsHeaderState extends State<GameDetailsHeader> {
   }
 
   Future<String?> _getToken() => SessionStore.getToken();
+
+  // Chamado pela tela do jogo ao puxar para atualizar
+  Future<void> refresh() => Future.wait([_checkLibrary(), _loadMyReview()]);
 
   Future<void> _checkLibrary() async {
     try {
@@ -206,6 +210,7 @@ class _GameDetailsHeaderState extends State<GameDetailsHeader> {
       if (data['success'] == true && mounted) {
         setState(() => _myReview = null);
         widget.onReviewSubmitted?.call();
+        ReviewEvents().changed();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Review apagada')),
         );
@@ -355,7 +360,7 @@ class _GameDetailsHeaderState extends State<GameDetailsHeader> {
 
                 children: [
                   Text(
-                    'PLAYBOXED',
+                    'PLAYBOXD',
                     style: TextStyle(
                       color: settings.accentColor,
 

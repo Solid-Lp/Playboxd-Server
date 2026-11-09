@@ -2,7 +2,7 @@
 
 ## Objetivo
 
-Documentar os requisitos funcionais e não funcionais do projeto Gamer Letterbox / Playboxed, garantindo clareza para o desenvolvimento e validação de funcionalidades.
+Documentar os requisitos funcionais e não funcionais do projeto Gamer Letterbox / Playboxd, garantindo clareza para o desenvolvimento e validação de funcionalidades.
 
 ## Stakeholders
 

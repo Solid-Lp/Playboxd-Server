@@ -315,7 +315,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   child: Text(
 
-                    'PLAYBOXED',
+                    'PLAYBOXD',
 
                     style: TextStyle(
 
@@ -417,7 +417,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                               Text(
 
-                                'SIGN IN TO PLAYBOXED',
+                                'SIGN IN TO PLAYBOXD',
 
                                 style: TextStyle(
 

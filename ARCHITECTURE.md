@@ -1,4 +1,4 @@
-# Gamer Letterbox / Playboxed Architecture
+# Gamer Letterbox / Playboxd Architecture
 
 Este documento descreve os principais blocos de arquitetura do aplicativo Flutter e do backend.
 

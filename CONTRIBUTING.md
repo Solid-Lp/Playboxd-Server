@@ -1,4 +1,4 @@
-# Contributing to Gamer Letterbox / Playboxed
+# Contributing to Gamer Letterbox / Playboxd
 
 Obrigado por contribuir para o projeto! Este guia descreve o fluxo recomendado para colaborar, como manter a qualidade do código e como enviar alterações.
 

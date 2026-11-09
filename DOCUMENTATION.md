@@ -1,8 +1,8 @@
 ---
-title: "Gamer Letterbox / Playboxed — Documentação Consolidada"
+title: "Gamer Letterbox / Playboxd — Documentação Consolidada"
 ---
 
-# Gamer Letterbox / Playboxed — Documentação Consolidada
+# Gamer Letterbox / Playboxd — Documentação Consolidada
 
 ## Sumário
 
@@ -46,11 +46,11 @@ title: "Gamer Letterbox / Playboxed — Documentação Consolidada"
 
 ## Introdução
 
-Esta documentação consolidada reúne os requisitos, a arquitetura, as diretrizes de contribuição e o resumo do projeto Gamer Letterbox / Playboxed. O objetivo é fornecer um material único e organizado para apresentação, revisão e entrega.
+Esta documentação consolidada reúne os requisitos, a arquitetura, as diretrizes de contribuição e o resumo do projeto Gamer Letterbox / Playboxd. O objetivo é fornecer um material único e organizado para apresentação, revisão e entrega.
 
 ## Resumo do Projeto
 
-Gamer Letterbox / Playboxed é um aplicativo Flutter para descoberta, biblioteca e avaliações de jogos, com backend Node.js + PostgreSQL.
+Gamer Letterbox / Playboxd é um aplicativo Flutter para descoberta, biblioteca e avaliações de jogos, com backend Node.js + PostgreSQL.
 
 ### Principais Características
 
@@ -78,7 +78,7 @@ Gamer Letterbox / Playboxed é um aplicativo Flutter para descoberta, biblioteca
 
 ### Objetivo
 
-Documentar os requisitos funcionais e não funcionais do projeto Gamer Letterbox / Playboxed, garantindo clareza para o desenvolvimento e validação de funcionalidades.
+Documentar os requisitos funcionais e não funcionais do projeto Gamer Letterbox / Playboxd, garantindo clareza para o desenvolvimento e validação de funcionalidades.
 
 ### Stakeholders
 

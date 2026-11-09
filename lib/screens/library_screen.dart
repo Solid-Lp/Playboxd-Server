@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import '../widgets/cover_image.dart';
+import '../widgets/refresh_error.dart';
 import '../services/api_service.dart';
 import '../services/current_user.dart';
 import '../services/session_store.dart';
@@ -35,8 +36,9 @@ class LibraryScreenState extends State<LibraryScreen> {
 
   Future<String?> _getToken() => SessionStore.getToken();
 
-  Future<void> loadLibrary() async {
-    setState(() => _loading = true);
+  // silent: atualiza sem trocar a lista pela rodinha central (usado ao puxar a tela)
+  Future<void> loadLibrary({bool silent = false}) async {
+    if (!silent) setState(() => _loading = true);
     try {
       final token = await _getToken();
       final res = await http.get(
@@ -44,15 +46,21 @@ class LibraryScreenState extends State<LibraryScreen> {
         headers: {'Authorization': 'Bearer $token'},
       );
       final data = jsonDecode(res.body);
-      if (data['success']) {
+      if (!mounted) return;
+      if (data['success'] == true) {
         setState(() {
           _library = List<Map<String, dynamic>>.from(data['data']);
           _loading = false;
         });
+      } else {
+        setState(() => _loading = false);
+        if (silent) showRefreshError(context);
       }
     } catch (e) {
       debugPrint('Erro ao carregar biblioteca: $e');
+      if (!mounted) return;
       setState(() => _loading = false);
+      if (silent) showRefreshError(context);
     }
   }
 
@@ -119,9 +127,12 @@ class LibraryScreenState extends State<LibraryScreen> {
                 ? const Center(
                     child: CircularProgressIndicator(color: Color(0xFF39FF14)),
                   )
-                : _filteredGames.isEmpty
-                    ? _buildEmpty()
-                    : _buildList(),
+                : RefreshIndicator(
+                    color: const Color(0xFF39FF14),
+                    backgroundColor: const Color(0xFF111827),
+                    onRefresh: () => loadLibrary(silent: true),
+                    child: _filteredGames.isEmpty ? _buildEmpty() : _buildList(),
+                  ),
           ),
         ],
       ),
@@ -138,7 +149,7 @@ class LibraryScreenState extends State<LibraryScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'PLAYBOXED',
+                'PLAYBOXD',
                 style: TextStyle(
                   color: Color(0xFF39FF14),
                   fontSize: 30,
@@ -232,6 +243,7 @@ class LibraryScreenState extends State<LibraryScreen> {
 
   Widget _buildList() {
     return ListView.separated(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.symmetric(horizontal: 20),
       itemCount: _filteredGames.length,
       separatorBuilder: (_, __) => const SizedBox(height: 16),
@@ -265,6 +277,19 @@ class LibraryScreenState extends State<LibraryScreen> {
   }
 
   Widget _buildEmpty() {
+    // Rolável para que dê para puxar e atualizar mesmo com a lista vazia
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: SizedBox(
+          height: constraints.maxHeight,
+          child: _buildEmptyContent(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyContent() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,

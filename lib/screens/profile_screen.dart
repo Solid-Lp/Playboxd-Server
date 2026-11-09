@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../widgets/cover_image.dart';
+import '../widgets/refresh_error.dart';
 import '../services/api_service.dart';
 import '../services/app_settings.dart';
 import '../services/current_user.dart';
@@ -50,8 +51,9 @@ class ProfileScreenState extends State<ProfileScreen> {
     loadProfile();
   }
 
-  Future<void> loadProfile() async {
-    setState(() => _loading = true);
+  // silent: atualiza sem esconder o perfil atrás da rodinha central (usado ao puxar a tela)
+  Future<void> loadProfile({bool silent = false}) async {
+    if (!silent) setState(() => _loading = true);
 
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -81,6 +83,7 @@ class ProfileScreenState extends State<ProfileScreen> {
       final statsData = jsonDecode(results[2].body);
       final myReviewsData = jsonDecode(results[3].body);
 
+      if (!mounted) return;
       setState(() {
         _username = prefs.getString('username') ?? 'Player';
         _email = prefs.getString('email') ?? '';
@@ -110,7 +113,9 @@ class ProfileScreenState extends State<ProfileScreen> {
       });
     } catch (e) {
       debugPrint('Erro ao carregar perfil: $e');
+      if (!mounted) return;
       setState(() => _loading = false);
+      if (silent) showRefreshError(context);
     }
   }
 
@@ -220,7 +225,12 @@ class ProfileScreenState extends State<ProfileScreen> {
           child: Container(
             color: bg,
             child: SafeArea(
-              child: SingleChildScrollView(
+              child: RefreshIndicator(
+                color: accent,
+                backgroundColor: _settings.cardColor,
+                onRefresh: () => loadProfile(silent: true),
+                child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -241,6 +251,7 @@ class ProfileScreenState extends State<ProfileScreen> {
                     const SizedBox(height: 40),
                   ],
                 ),
+                ),
               ),
             ),
           ),
@@ -256,7 +267,7 @@ class ProfileScreenState extends State<ProfileScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            'PLAYBOXED',
+            'PLAYBOXD',
             style: TextStyle(
               color: accent,
               fontSize: 22,
@@ -366,9 +377,11 @@ class ProfileScreenState extends State<ProfileScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _statItem(_gamesPlayed.toString(), 'GAMES PLAYED', text),
+          _statItem(_gamesPlayed.toString(), 'GAMES PLAYED', text,
+              onTap: widget.onLibraryTap),
           _statDivider(),
-          _statItem(_reviewsWritten.toString(), 'REVIEWS WRITTEN', text),
+          _statItem(_reviewsWritten.toString(), 'REVIEWS WRITTEN', text,
+              onTap: _openMyReviews),
           _statDivider(),
           _statItem(_followers.toString(), 'FOLLOWERS', text),
         ],
@@ -376,8 +389,19 @@ class ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _statItem(String value, String label, Color text) {
-    return Column(
+  // Mesma lista completa do "View All" de My Reviews
+  void _openMyReviews() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MyReviewsScreen(reviews: _myReviews),
+      ),
+    );
+  }
+
+  Widget _statItem(String value, String label, Color text,
+      {VoidCallback? onTap}) {
+    final content = Column(
       children: [
         Text(
           value,
@@ -397,6 +421,12 @@ class ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
       ],
+    );
+    if (onTap == null) return content;
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: content,
     );
   }
 
@@ -627,12 +657,7 @@ class ProfileScreenState extends State<ProfileScreen> {
               ),
               if (_myReviews.length > _profileReviewsLimit)
                 GestureDetector(
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => MyReviewsScreen(reviews: _myReviews),
-                    ),
-                  ),
+                  onTap: _openMyReviews,
                   child: Text(
                     'View All (${_myReviews.length})',
                     style: TextStyle(

@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import '../services/api_service.dart';
 import '../services/app_settings.dart';
 import '../widgets/game_details_header.dart';
+import '../widgets/refresh_error.dart';
 import '../widgets/review_card_large.dart';
 import '../screens/write_review_screen.dart';
 
@@ -30,6 +31,7 @@ class GameDetailsScreen extends StatefulWidget {
 
 class _GameDetailsScreenState extends State<GameDetailsScreen> {
   final _settings = AppSettings();
+  final _headerKey = GlobalKey<GameDetailsHeaderState>();
 
   late dynamic _game = widget.game;
 
@@ -44,7 +46,8 @@ class _GameDetailsScreenState extends State<GameDetailsScreen> {
     if (widget.game['cover'] == null) _loadFullGame();
   }
 
-  Future<void> _loadFullGame() async {
+  // Retornam false quando não conseguem falar com o servidor
+  Future<bool> _loadFullGame() async {
     try {
       final res = await http.get(
         Uri.parse('${ApiService.baseUrl}/games/${widget.game['id']}'),
@@ -53,27 +56,42 @@ class _GameDetailsScreenState extends State<GameDetailsScreen> {
       if (data['success'] == true && mounted) {
         setState(() => _game = data['data']);
       }
+      return true;
     } catch (e) {
       debugPrint('Erro ao carregar jogo: $e');
+      return false;
     }
   }
 
-  Future<void> _loadReviews() async {
+  Future<bool> _loadReviews() async {
     try {
       final gameId = widget.game['id'].toString();
       final res = await http.get(
         Uri.parse('${ApiService.baseUrl}/reviews/$gameId'),
       );
       final data = jsonDecode(res.body);
+      if (!mounted) return true;
       setState(() {
-        _reviews = data['success']
-            ? List<Map<String, dynamic>>.from(data['data'])
-            : [];
+        if (data['success'] == true) {
+          _reviews = List<Map<String, dynamic>>.from(data['data']);
+        }
         _loadingReviews = false;
       });
+      return true;
     } catch (e) {
-      setState(() => _loadingReviews = false);
+      if (mounted) setState(() => _loadingReviews = false);
+      return false;
     }
+  }
+
+  // Puxar para atualizar: dados do jogo, reviews, biblioteca e a sua review
+  Future<void> _refresh() async {
+    final results = await Future.wait([
+      _loadFullGame(),
+      _loadReviews(),
+      _headerKey.currentState?.refresh().then((_) => true) ?? Future.value(true),
+    ]);
+    if (results.contains(false) && mounted) showRefreshError(context);
   }
 
   String _timeAgo(String? createdAt) {
@@ -95,11 +113,17 @@ class _GameDetailsScreenState extends State<GameDetailsScreen> {
       builder: (context, _) {
         return Scaffold(
           backgroundColor: _settings.bgColor,
-          body: SingleChildScrollView(
+          body: RefreshIndicator(
+            color: _settings.accentColor,
+            backgroundColor: _settings.cardColor,
+            onRefresh: _refresh,
+            child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 GameDetailsHeader(
+                  key: _headerKey,
                   game: _game,
                   imageUrl: widget.imageUrl,
                   onReviewSubmitted: _loadReviews,
@@ -122,6 +146,7 @@ class _GameDetailsScreenState extends State<GameDetailsScreen> {
                 ),
               ],
             ),
+          ),
           ),
         );
       },
@@ -168,31 +193,37 @@ class _GameDetailsScreenState extends State<GameDetailsScreen> {
 
           const SizedBox(height: 20),
 
+          // Gênero ocupa o espaço livre e quebra linha; a nota fica fixa à direita
           Row(
 
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
 
             children: [
 
-              Column(
+              Expanded(
+                child: Column(
 
-                crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
 
-                children: [
+                  children: [
 
-                  Text(
-                    'GENRE',
-                    style: TextStyle(color: _settings.mutedColor),
-                  ),
+                    Text(
+                      'GENRE',
+                      style: TextStyle(color: _settings.mutedColor),
+                    ),
 
-                  const SizedBox(height: 8),
+                    const SizedBox(height: 8),
 
-                  Text(
-                    _getGenre(),
-                    style: TextStyle(color: _settings.textColor),
-                  ),
-                ],
+                    Text(
+                      _getGenre(),
+                      softWrap: true,
+                      style: TextStyle(color: _settings.textColor),
+                    ),
+                  ],
+                ),
               ),
+
+              const SizedBox(width: 16),
 
               Column(
 

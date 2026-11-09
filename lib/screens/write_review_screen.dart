@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 
 import '../widgets/cover_image.dart';
 import '../services/api_service.dart';
+import '../services/review_events.dart';
 import '../services/app_settings.dart';
 import '../services/session_store.dart';
 
@@ -99,6 +100,7 @@ class _WriteReviewScreenState extends State<WriteReviewScreen> {
       final data = jsonDecode(res.body);
 
       if (data['success'] == true) {
+        ReviewEvents().changed();
         if (mounted) {
           Navigator.pop(context, true);
           ScaffoldMessenger.of(context).showSnackBar(
@@ -197,7 +199,7 @@ class _WriteReviewScreenState extends State<WriteReviewScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'PLAYBOXED',
+                    'PLAYBOXD',
                     style: TextStyle(
                       color: _settings.accentColor,
                       fontSize: 22,

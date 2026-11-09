@@ -411,7 +411,7 @@ async function validateUsername(username, excludeUserId) {
 app.get('/', async (req, res) => {
   res.json({
     success: true,
-    message: 'PLAYBOXED API ONLINE',
+    message: 'PLAYBOXD API ONLINE',
   });
 });
 

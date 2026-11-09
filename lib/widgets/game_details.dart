@@ -79,7 +79,7 @@ class GameDetailsHeader extends StatelessWidget {
 
                   const Text(
 
-                    'PLAYBOXED',
+                    'PLAYBOXD',
 
                     style: TextStyle(
 

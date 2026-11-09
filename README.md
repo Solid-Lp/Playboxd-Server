@@ -1,4 +1,4 @@
-# Gamer Letterbox / Playboxed
+# Gamer Letterbox / Playboxd
 
 Aplicativo Flutter para descoberta, biblioteca e avaliações de jogos, com backend Node.js + PostgreSQL.
 

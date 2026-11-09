@@ -6,6 +6,8 @@ import 'package:http/http.dart' as http;
 import '../widgets/cover_image.dart';
 import '../services/api_service.dart';
 import '../services/app_settings.dart';
+import '../services/review_events.dart';
+import '../widgets/refresh_error.dart';
 
 import 'game_details_screen.dart';
 
@@ -25,20 +27,32 @@ class _TopRatedScreenState extends State<TopRatedScreen> {
   void initState() {
     super.initState();
     _load();
+    ReviewEvents().addListener(_onReviewsChanged);
   }
 
-  Future<void> _load() async {
+  @override
+  void dispose() {
+    ReviewEvents().removeListener(_onReviewsChanged);
+    super.dispose();
+  }
+
+  void _onReviewsChanged() => _load();
+
+  Future<void> _load({bool showErrors = false}) async {
     try {
       final res = await http.get(
         Uri.parse('${ApiService.baseUrl}/top-rated'),
       );
       final data = jsonDecode(res.body);
+      if (!mounted) return;
       setState(() {
-        _topRated = data['success'] ? data['data'] : [];
+        if (data['success'] == true) _topRated = data['data'] ?? [];
         _loading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() => _loading = false);
+      if (showErrors) showRefreshError(context);
     }
   }
 
@@ -69,9 +83,12 @@ class _TopRatedScreenState extends State<TopRatedScreen> {
                             color: accent,
                           ),
                         )
-                      : _topRated.isEmpty
-                          ? _buildEmpty()
-                          : _buildList(),
+                      : RefreshIndicator(
+                          color: accent,
+                          backgroundColor: card,
+                          onRefresh: () => _load(showErrors: true),
+                          child: _topRated.isEmpty ? _buildEmpty() : _buildList(),
+                        ),
                 ),
               ],
             ),
@@ -95,7 +112,7 @@ class _TopRatedScreenState extends State<TopRatedScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'PLAYBOXED',
+                'PLAYBOXD',
                 style: TextStyle(
                   color: _settings.accentColor,
                   fontSize: 14,
@@ -120,6 +137,7 @@ class _TopRatedScreenState extends State<TopRatedScreen> {
 
   Widget _buildList() {
     return ListView.builder(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.symmetric(horizontal: 20),
       itemCount: _topRated.length,
       itemBuilder: (context, index) {
@@ -285,7 +303,17 @@ class _TopRatedScreenState extends State<TopRatedScreen> {
     );
   }
 
+  // Rolável para que dê para puxar e atualizar mesmo sem jogos
   Widget _buildEmpty() {
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: SizedBox(height: constraints.maxHeight, child: _buildEmptyContent()),
+      ),
+    );
+  }
+
+  Widget _buildEmptyContent() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,

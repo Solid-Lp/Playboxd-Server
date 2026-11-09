@@ -479,7 +479,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'PLAYBOXED',
+            'PLAYBOXD',
             style: TextStyle(
               color: accentColor,
               fontSize: 22 * scale,
