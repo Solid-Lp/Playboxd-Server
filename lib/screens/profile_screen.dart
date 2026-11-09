@@ -1,10 +1,10 @@
 import 'dart:convert';
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../widgets/cover_image.dart';
 import '../services/api_service.dart';
 import '../services/app_settings.dart';
 import '../services/current_user.dart';
@@ -531,7 +531,7 @@ class ProfileScreenState extends State<ProfileScreen> {
         child: Stack(
           children: [
             imgUrl.isNotEmpty
-                ? CachedNetworkImage(
+                ? CoverImage(
                   imageUrl: imgUrl,
                   height: large ? 200 : 180,
                   width: double.infinity,

@@ -1,9 +1,9 @@
 import 'dart:convert';
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
+import '../widgets/cover_image.dart';
 import '../services/api_service.dart';
 import '../services/app_settings.dart';
 
@@ -168,7 +168,7 @@ class _TopRatedScreenState extends State<TopRatedScreen> {
                   left: Radius.circular(20),
                 ),
                 child: coverUrl.isNotEmpty
-                    ? CachedNetworkImage(
+                    ? CoverImage(
                         imageUrl: coverUrl,
                         width: 90,
                         height: 110,

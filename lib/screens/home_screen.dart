@@ -1,10 +1,10 @@
 import 'dart:convert';
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 
+import '../widgets/cover_image.dart';
 import '../services/api_service.dart';
 import '../services/app_settings.dart';
 import '../services/current_user.dart';
@@ -279,16 +279,14 @@ class _MainScreenState extends State<MainScreen> {
         ),
         child: ClipRRect(
         borderRadius: BorderRadius.circular(30),
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 520),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(30),
-            image: DecorationImage(
-              image: CachedNetworkImageProvider(getImage(game)),
-              fit: BoxFit.cover,
+        // Capa por baixo do degradê (CoverImage também funciona no navegador)
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: CoverImage(imageUrl: getImage(game), fit: BoxFit.cover),
             ),
-          ),
-          child: Container(
+          Container(
+            constraints: const BoxConstraints(minHeight: 520),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(30),
               gradient: LinearGradient(
@@ -332,6 +330,7 @@ class _MainScreenState extends State<MainScreen> {
               ),
             ),
           ),
+          ],
         ),
       ),
       ),
@@ -483,7 +482,7 @@ class _MainScreenState extends State<MainScreen> {
                   borderRadius: BorderRadius.circular(10),
                   child:
                       coverUrl.isNotEmpty
-                          ? CachedNetworkImage(
+                          ? CoverImage(
                             imageUrl: coverUrl,
                             width: 48,
                             height: 60,

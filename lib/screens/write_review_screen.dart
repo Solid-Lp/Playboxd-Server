@@ -1,9 +1,9 @@
 import 'dart:convert';
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
+import '../widgets/cover_image.dart';
 import '../services/api_service.dart';
 import '../services/app_settings.dart';
 import '../services/session_store.dart';
@@ -169,7 +169,7 @@ class _WriteReviewScreenState extends State<WriteReviewScreen> {
       child: Stack(
         children: [
           widget.imageUrl.isNotEmpty
-              ? CachedNetworkImage(
+              ? CoverImage(
                   imageUrl: widget.imageUrl,
                   width: double.infinity,
                   height: 260,
@@ -236,7 +236,7 @@ class _WriteReviewScreenState extends State<WriteReviewScreen> {
         ClipRRect(
           borderRadius: BorderRadius.circular(12),
           child: widget.imageUrl.isNotEmpty
-              ? CachedNetworkImage(
+              ? CoverImage(
                   imageUrl: widget.imageUrl,
                   width: 64,
                   height: 80,

@@ -1,5 +1,6 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+
+import 'cover_image.dart';
 
 // Review do próprio usuário no perfil: capa e nome à esquerda,
 // estrelas e texto à direita, com "Ler mais..." quando o texto não cabe.
@@ -77,7 +78,7 @@ class _MyReviewCardState extends State<MyReviewCard> {
               borderRadius: BorderRadius.circular(8),
 
               child: widget.coverUrl.isNotEmpty
-                  ? CachedNetworkImage(
+                  ? CoverImage(
                       imageUrl: widget.coverUrl,
                       width: _coverWidth,
                       height: _coverHeight,

@@ -66,6 +66,9 @@
     }
     .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(57, 255, 20, .25); }
     .btn.small { padding: 9px 16px; font-size: 14px; border-radius: 12px; }
+    .btn.ghost { background: transparent; color: var(--text); border: 1px solid var(--border); margin-left: 8px; }
+    .btn.ghost:hover { border-color: var(--accent); box-shadow: none; }
+    @media (max-width: 480px) { .btn.ghost { margin: 10px 0 0; } }
     .btn svg { width: 20px; height: 20px; }
 
     /* Hero */
@@ -183,7 +186,8 @@
             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3.6 1.8a1.5 1.5 0 0 0-.6 1.2v18a1.5 1.5 0 0 0 .6 1.2l10.1-10.2L3.6 1.8Zm11.5 8.8 2.8-2.8L5.9.9l9.2 9.7Zm0 2.8-9.2 9.7 12-6.9-2.8-2.8Zm6.1-2.6-2.6-1.5-3 3 3 3 2.6-1.5a1.6 1.6 0 0 0 0-3Z"/></svg>
             Baixar na Google Play
           </a>
-          <span class="cta-note">Em teste fechado. Em breve para todos.</span>
+          <a class="btn ghost" href="app/">Usar no navegador</a>
+          <span class="cta-note">App Android em teste fechado. No navegador, já dá para usar.</span>
         </div>
 
         <!-- Ilustração da tela do app -->

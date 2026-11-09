@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
@@ -7,6 +9,7 @@ import 'package:http/http.dart' as http;
 import '../services/api_service.dart';
 import '../services/auth_session.dart';
 import '../services/google_auth_service.dart';
+import '../widgets/google_web_button.dart';
 import 'forgot_password_screen.dart';
 import 'signup_screen.dart';
 import 'verify_email_screen.dart';
@@ -124,7 +127,50 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  Future<void> loginWithGoogle() async {
+  StreamSubscription<GoogleSignInAuthenticationEvent>? googleEvents;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // No navegador o login é feito pelo botão oficial do Google,
+    // que avisa o resultado por este evento
+    if (kIsWeb) listenGoogleWeb();
+  }
+
+  Future<void> listenGoogleWeb() async {
+
+    await GoogleAuthService.ensureInitialized();
+
+    googleEvents = GoogleSignIn.instance.authenticationEvents.listen(
+      (event) {
+        if (event is GoogleSignInAuthenticationEventSignIn) {
+          loginWithGoogle(webIdToken: event.user.authentication.idToken);
+        }
+      },
+      onError: (error) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Erro no login com Google')),
+          );
+        }
+      },
+    );
+
+    // O botão do Google só aparece depois da inicialização
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    googleEvents?.cancel();
+    emailController.dispose();
+    passwordController.dispose();
+    super.dispose();
+  }
+
+  // No celular abre a janela do Google; no navegador recebe o token do botão
+  Future<void> loginWithGoogle({String? webIdToken}) async {
 
     try {
 
@@ -132,11 +178,15 @@ class _LoginScreenState extends State<LoginScreen> {
         loading = true;
       });
 
-      await GoogleAuthService.ensureInitialized();
+      String? idToken = webIdToken;
 
-      final account = await GoogleSignIn.instance.authenticate();
+      if (!kIsWeb) {
+        await GoogleAuthService.ensureInitialized();
 
-      final idToken = account.authentication.idToken;
+        final account = await GoogleSignIn.instance.authenticate();
+
+        idToken = account.authentication.idToken;
+      }
 
       if (idToken == null) {
         throw Exception('Google não retornou o token de login');
@@ -422,6 +472,16 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 20),
 
+                if (kIsWeb)
+                  SizedBox(
+                    height: 58,
+                    child: Center(
+                      child: GoogleAuthService.isInitialized
+                          ? googleWebButton()
+                          : const SizedBox.shrink(),
+                    ),
+                  )
+                else
                 SizedBox(
 
                   width: double.infinity,

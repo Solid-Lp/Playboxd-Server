@@ -1,5 +1,6 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+
+import 'cover_image.dart';
 
 class GameDetailsHeader extends StatelessWidget {
 
@@ -27,7 +28,7 @@ class GameDetailsHeader extends StatelessWidget {
 
         children: [
 
-          CachedNetworkImage(
+          CoverImage(
 
             imageUrl: imageUrl,
 

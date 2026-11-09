@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -17,6 +18,9 @@ void main() async {
   await CurrentUser().load();
   runApp(MyApp());
 }
+
+// Largura máxima do app no navegador do computador
+const double _maxAppWidth = 520;
 
 class MyApp extends StatelessWidget {
   MyApp({super.key});
@@ -83,6 +87,25 @@ class MyApp extends StatelessWidget {
 
         return MaterialApp(
           debugShowCheckedModeBanner: false,
+          title: 'Playboxd',
+          // Num monitor, o app fica numa coluna com largura de celular
+          builder: (context, child) {
+            final media = MediaQuery.of(context);
+            // Só no navegador: tablets Android continuam em tela cheia
+            if (!kIsWeb || media.size.width <= _maxAppWidth) return child!;
+            return ColoredBox(
+              color: const Color(0xFF020510),
+              child: Center(
+                child: SizedBox(
+                  width: _maxAppWidth,
+                  child: MediaQuery(
+                    data: media.copyWith(size: Size(_maxAppWidth, media.size.height)),
+                    child: child!,
+                  ),
+                ),
+              ),
+            );
+          },
           theme: ThemeData(
             colorScheme: colorScheme,
             scaffoldBackgroundColor: _settings.bgColor,

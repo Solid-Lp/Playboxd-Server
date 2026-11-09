@@ -1,9 +1,9 @@
 import 'dart:convert';
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
+import '../widgets/cover_image.dart';
 import '../services/api_service.dart';
 import '../services/current_user.dart';
 import '../services/session_store.dart';
@@ -319,7 +319,7 @@ class _LibraryCard extends StatelessWidget {
           ClipRRect(
             borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
             child: coverUrl.isNotEmpty
-                ? CachedNetworkImage(
+                ? CoverImage(
                     imageUrl: coverUrl,
                     width: double.infinity,
                     height: 180,

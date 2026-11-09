@@ -51,3 +51,6 @@ node_modules/
 # Local environment and backup files
 .env
 *.bak
+
+# Versão web: o CanvasKit vem do CDN do Google, não precisa ir para o Git (37 MB)
+/site/app/canvaskit/
