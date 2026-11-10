@@ -94,6 +94,7 @@ O app é dividido em camadas:
 - `CONTRIBUTING.md` — guia de contribuição para o projeto
 - `ARCHITECTURE.md` — descrição da arquitetura do app e backend
 - `REQUIREMENTS.md` — análise de requisitos funcionais e não funcionais
+- [`MODELO_DE_DADOS.md`](MODELO_DE_DADOS.md) — diagrama entidade-relacionamento e dicionário de dados do banco
 
 ### Backend
 
